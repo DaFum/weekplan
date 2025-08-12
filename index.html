@@ -28,7 +28,14 @@
             --warning: #f59e0b;
             --danger: #ef4444;
         }
-        
+
+        /* Utility-Klassen für CSS-Variablen (Tailwind-kompatibel) */
+        .text-secondary    { color: var(--text-secondary); }
+        .text-accent       { color: var(--text-accent); }
+        .bg-accent         { background-color: var(--bg-accent); }
+        .bg-secondary      { background-color: var(--bg-secondary); }
+        .border-border-color { border-color: var(--border-color); }
+
         .dark {
             --bg-primary: #0c2a4d;
             --bg-secondary: #0f3460;
@@ -42,6 +49,7 @@
             --warning: #fbbf24;
             --danger: #f87171;
         }
+    </style>
         
         body {
             font-family: 'Nunito', sans-serif;
