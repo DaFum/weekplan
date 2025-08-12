@@ -377,6 +377,92 @@
 
     /* Konfetti overflow fix */
     .konfetti { width: 100%; height: 100%; }
+  /*
+   * Additional responsive and accessibility styles
+   */
+  /* Ensure all interactive elements meet the minimum recommended tap size on touch devices */
+  button, .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Use auto-fitting columns for the task grid so cards resize gracefully on small screens */
+  .task-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  /* Week tabs: horizontally scrollable with snapping and indicator */
+  #wochen-nav {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 0.5rem 1rem;
+    position: relative;
+  }
+
+  .nav-button {
+    flex: 0 0 auto;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    font-weight: 600;
+    scroll-snap-align: center;
+  }
+
+  .week-tab-indicator {
+    position: absolute;
+    bottom: 4px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--text-accent);
+    transition: width .3s, transform .3s;
+  }
+
+  /* Floating action button: respect safe-area insets and avoid overlapping content */
+  .floating-button {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: max(1.5rem, env(safe-area-inset-bottom) + 0.5rem);
+    z-index: 40;
+  }
+
+  /* Add bottom padding so content doesn’t hide behind the floating button */
+  body {
+    padding-bottom: 5rem;
+  }
+
+  /* Limit icon sizes in empty state and ensure long task names wrap */
+  .empty-tasks-icon {
+    max-width: 50px;
+    max-height: 50px;
+  }
+
+  .task-name {
+    word-break: break-word;
+  }
+
+  /* Make all modals scrollable and adapt to the viewport height */
+  #task-modal,
+  #prompt-modal,
+  #memory-game-modal,
+  #quiz-game-modal {
+    /* Allow modals to scroll if content exceeds the viewport */
+    overflow-y: auto;
+    height: 100dvh;
+    padding: 1rem;
+  }
+
+  #task-modal .modal-content,
+  #prompt-modal > div,
+  #memory-game-modal > div,
+  #quiz-game-modal > div {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    width: 100%;
+  }
+
   </style>
 </head>
 <body class="text-slate-800">
@@ -799,7 +885,10 @@
         function renderPlan() {
             const wochenContainer = document.getElementById('wochen-container');
             const wochenNav = document.getElementById('wochen-nav');
-            wochenContainer.innerHTML = ''; wochenNav.innerHTML = '';
+            wochenContainer.innerHTML = '';
+            wochenNav.innerHTML = '';
+            // Set ARIA role for tablist to improve accessibility
+            wochenNav.setAttribute('role', 'tablist');
             const startOfCurrentWeek = getStartOfWeek(new Date());
             const todayISO = getISODate(new Date());
 
@@ -810,6 +899,10 @@
                 navBtn.className = `nav-button`;
                 navBtn.dataset.weekIndex = week;
                 navBtn.onclick = () => showWoche(week);
+                // ARIA roles and roving tabindex for keyboard navigation
+                navBtn.setAttribute('role', 'tab');
+                navBtn.setAttribute('aria-selected', 'false');
+                navBtn.setAttribute('tabindex', '-1');
                 wochenNav.appendChild(navBtn);
 
                 const wochenAnsicht = document.createElement('div');
@@ -844,8 +937,31 @@
                 wochenAnsicht.appendChild(tagesContainer);
                 wochenContainer.appendChild(wochenAnsicht);
             }
+            // After all tabs are created append the indicator element
+            const indicatorEl = document.createElement('div');
+            indicatorEl.id = 'week-tab-indicator';
+            indicatorEl.className = 'week-tab-indicator';
+            wochenNav.appendChild(indicatorEl);
+            // Keyboard navigation within the tablist using arrow keys
+            wochenNav.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    const buttons = Array.from(wochenNav.querySelectorAll('.nav-button'));
+                    const currentIndex = buttons.findIndex(btn => btn.getAttribute('tabindex') === '0');
+                    let newIndex;
+                    if (e.key === 'ArrowRight') {
+                        newIndex = (currentIndex + 1) % buttons.length;
+                    } else {
+                        newIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+                    }
+                    buttons[newIndex].focus();
+                    showWoche(parseInt(buttons[newIndex].dataset.weekIndex));
+                    e.preventDefault();
+                }
+            });
             renderAllTasks();
             showWoche(aktiveWoche);
+            // Position the indicator for the initially active tab
+            updateWeekTabIndicator();
         }
 
         function showWoche(index) {
@@ -858,8 +974,30 @@
                 btn.classList.toggle('text-white', isActive);
                 btn.classList.toggle('bg-accent', !isActive);
                 btn.classList.toggle('text-secondary', !isActive);
+                // Update ARIA attributes and tabindex for accessibility
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                btn.setAttribute('tabindex', isActive ? '0' : '-1');
             });
+            // Move the indicator under the active tab
+            updateWeekTabIndicator();
         }
+
+        // Update the position and width of the week tab indicator based on the active tab.
+        function updateWeekTabIndicator() {
+            const navEl = document.getElementById('wochen-nav');
+            const indicatorEl = document.getElementById('week-tab-indicator');
+            if (!navEl || !indicatorEl) return;
+            const activeBtn = navEl.querySelector('.nav-button.bg-indigo-600');
+            if (activeBtn) {
+                const navRect = navEl.getBoundingClientRect();
+                const btnRect = activeBtn.getBoundingClientRect();
+                indicatorEl.style.width = `${btnRect.width}px`;
+                indicatorEl.style.transform = `translateX(${btnRect.left - navRect.left}px)`;
+            }
+        }
+
+        // Recalculate indicator on resize
+        window.addEventListener('resize', updateWeekTabIndicator);
 
         function renderAllTasks() {
             document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
