@@ -1050,7 +1050,9 @@
             const container = document.getElementById('pc-time-tracker');
             const startOfWeek = getStartOfWeek(new Date());
             const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
-            const usedMinutes = tasks.filter(t => t.kategorie === 'pc' && t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek)).reduce((sum, t) => sum + (t.durationInMinutes || 0), 0);
+            const usedMinutes = tasks
+                .filter(t => t && t.kategorie === 'pc' && t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek))
+                .reduce((sum, t) => sum + (t.durationInMinutes || 0), 0);
             const totalMinutes = pcStundenGesamt * 60;
             const remainingMinutes = totalMinutes - usedMinutes;
             const progress = totalMinutes > 0 ? Math.min((usedMinutes / totalMinutes), 1) : 0;
