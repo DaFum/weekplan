@@ -845,6 +845,26 @@
                   </div>
               </form>
           </div>
+          <div class="bg-secondary rounded-2xl p-6 w-full max-w-md">
+              <div class="modal-header">
+                  <h2 id="prompt-modal-title" class="modal-title"></h2>
+                  <button type="button" onclick="closePromptModal()" class="close-modal text-secondary hover:text-accent">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                  </button>
+              </div>
+              <form id="prompt-form" onsubmit="handlePromptSubmit(event)">
+                  <div class="form-group">
+                      <label id="prompt-modal-label" for="prompt-modal-input" class="form-label">Wert</label>
+                      <input type="number" id="prompt-modal-input" min="0" step="1" class="form-input" required>
+                  </div>
+                  <div class="button-group">
+                      <button type="submit" class="btn btn-primary">Speichern</button>
+                      <button type="button" onclick="closePromptModal()" class="btn btn-secondary">Abbrechen</button>
+                  </div>
+              </form>
+          </div>
       </div>
 
     <!-- Memory Game Modal -->
