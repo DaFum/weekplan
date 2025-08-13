@@ -35,6 +35,10 @@
         .bg-accent         { background-color: var(--bg-accent); }
         .bg-secondary      { background-color: var(--bg-secondary); }
         .border-border-color { border-color: var(--border-color); }
+        /* Hover-Varianten (Doppelpunkt muss in CSS-Klassen escaped werden) */
+        .hover\:bg-accent:hover        { background-color: var(--bg-accent); }
+        .hover\:text-accent:hover      { color: var(--text-accent); }
+        .hover\:bg-border-color:hover  { background-color: var(--border-color); }
 
         .dark {
             --bg-primary: #0c2a4d;
