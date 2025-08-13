@@ -1227,6 +1227,7 @@
             
             // Initialize SortableJS for each task list
             document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
+                if (list.dataset.sortableInit === '1') return;
                 new Sortable(list, {
                     animation: 150,
                     ghostClass: 'opacity-50',
@@ -1251,6 +1252,7 @@
                         saveData();
                     }
                 });
+                list.dataset.sortableInit = '1';
             });
             
             updatePunkteAnzeige();
