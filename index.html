@@ -966,8 +966,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             initEventListeners();
             initSounds();
-            loadData();
-            initTheme();
+            loadDataAndTheme();
             cleanupOldTasks();
             renderAllUI();
             updateMotivationsspruch();
@@ -1428,20 +1427,28 @@
             }
         }
         
-        function loadData() {
+        function loadDataAndTheme() {
+            let data = {};
             try {
-                const data = JSON.parse(storage.getItem('wochenplanerData') || '{}');
-                tasks = data.tasks || [];
-                pcStundenGesamt = data.pcStundenGesamt || 0;
-                wochenZiel = data.wochenZiel || 10;
-                coins = data.coins || 0;
+                const savedData = storage.getItem('wochenplanerData');
+                if (savedData) {
+                    data = JSON.parse(savedData);
+                }
             } catch (e) {
                 console.error("Fehler beim Laden der Daten:", e);
-                tasks = [];
-                pcStundenGesamt = 0;
-                wochenZiel = 10;
-                coins = 0;
+                data = {}; // Reset to empty object on error
             }
+
+            tasks = data.tasks || [];
+            pcStundenGesamt = data.pcStundenGesamt || 0;
+            wochenZiel = data.wochenZiel || 10;
+            coins = data.coins || 0;
+
+            // Theme initialization
+            if (data.theme === 'dark' || (data.theme === undefined && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.body.classList.add('dark');
+            }
+            updateThemeIcons();
         }
 
         // --- Modal & Helfer ---
@@ -1569,14 +1576,6 @@
                 container.appendChild(konfetti);
                 setTimeout(() => konfetti.remove(), 3000);
             }
-        }
-        
-        function initTheme() {
-            const data = JSON.parse(storage.getItem('wochenplanerData') || '{}');
-            if (data.theme === 'dark' || (data.theme === undefined && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.body.classList.add('dark');
-            }
-            updateThemeIcons();
         }
         
         function toggleTheme() {
