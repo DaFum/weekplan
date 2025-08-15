@@ -921,7 +921,6 @@
         let wochenZiel = 10;
         let sounds = {};
         let promptCallback = null;
-        let inMemoryStorage = {};
         let coins = 0;
         let currentGame = null;
 
@@ -942,22 +941,21 @@
             return `${h} Std ${m} Min`;
         };
 
-        // --- Storage Helper (localStorage with fallback) ---
+        // --- Storage Helper (localStorage) ---
         const storage = {
             setItem: (key, value) => {
                 try {
                     localStorage.setItem(key, value);
                 } catch (e) {
-                    // Fallback to in-memory storage
-                    inMemoryStorage[key] = value;
+                    console.warn("localStorage is not available, data will not be persisted.", e);
                 }
             },
             getItem: (key) => {
                 try {
                     return localStorage.getItem(key);
                 } catch (e) {
-                    // Fallback to in-memory storage
-                    return inMemoryStorage[key] || null;
+                    console.warn("localStorage is not available, could not load data.", e);
+                    return null;
                 }
             }
         };
