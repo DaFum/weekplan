@@ -1231,23 +1231,23 @@
                     animation: 150,
                     ghostClass: 'opacity-50',
                     onEnd: (evt) => {
-                        // Re-order array to match DOM
-                        const taskId = evt.item.dataset.taskId;
                         const newIndex = evt.newIndex;
                         const oldIndex = evt.oldIndex;
                         
-                        // Find tasks for this date
                         const isoDate = list.id.replace('aufgaben-liste-', '');
-                        const tasksForDay = tasks.filter(t => t.date === isoDate);
                         
-                        // Reorder the tasks array
+                        // Separate tasks into those for the current day and all others.
+                        const tasksForDay = tasks.filter(t => t && t.date === isoDate);
+                        const otherTasks = tasks.filter(t => !t || t.date !== isoDate);
+
+                        // Reorder the tasks for the current day.
                         const taskToMove = tasksForDay.splice(oldIndex, 1)[0];
-                        tasksForDay.splice(newIndex, 0, taskToMove);
+                        if (taskToMove) { // Guard against undefined task
+                            tasksForDay.splice(newIndex, 0, taskToMove);
+                        }
                         
-                        // Update the main tasks array
-                        const otherTasks = tasks.filter(t => t.date !== isoDate);
+                        // Rebuild the main tasks array and save.
                         tasks = [...otherTasks, ...tasksForDay];
-                        
                         saveData();
                     }
                 });
@@ -1407,7 +1407,7 @@
         // --- Local Storage & Aufräumen ---
         function cleanupOldTasks() {
             const startOfCurrentWeekISO = getISODate(getStartOfWeek(new Date()));
-            tasks = tasks.filter(task => task.date && task.date >= startOfCurrentWeekISO);
+            tasks = tasks.filter(task => task && task.date && task.date >= startOfCurrentWeekISO);
         }
         
         function saveData() {
