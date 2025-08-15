@@ -1238,7 +1238,7 @@
                         
                         // Separate tasks into those for the current day and all others.
                         const tasksForDay = tasks.filter(t => t && t.date === isoDate);
-                        const otherTasks = tasks.filter(t => !t || t.date !== isoDate);
+                        const otherTasks = tasks.filter(t => t && t.date !== isoDate);
 
                         // Reorder the tasks for the current day.
                         const taskToMove = tasksForDay.splice(oldIndex, 1)[0];
