@@ -16,6 +16,16 @@ export const storage = {
     }
 };
 
+/**
+ * Speichert ausgewählte Teile des übergebenen Anwendungszustands in den persistenten Speicher.
+ *
+ * Speichert die folgenden Felder von `state` unter dem Schlüssel `'wochenplanerData'` als JSON:
+ * `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme`, `coins`.
+ * Bei Fehlern während der Serialisierung oder des Speichervorgangs wird der Fehler geloggt; es wird
+ * keine Ausnahme weitergeworfen.
+ *
+ * @param {Object} state - Der Anwendungszustand; erwartet mindestens die Felder `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme` und `coins`.
+ */
 export function saveData(state) {
     const dataToSave = {
         tasks: state.tasks,
@@ -31,6 +41,17 @@ export function saveData(state) {
     }
 }
 
+/**
+ * Lädt persistierte Anwendungsdaten aus dem lokalen Speicher.
+ *
+ * Versucht, den JSON-String unter dem Schlüssel 'wochenplanerData' aus dem `storage`
+ * zu lesen und zu parsen. Bei Erfolg wird das geparste Objekt zurückgegeben
+ * (erwartete Felder: z. B. `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme`, `coins`).
+ * Bei fehlenden Daten, JSON-Fehlern oder anderen Fehlern wird ein leeres Objekt
+ * zurückgegeben und der Fehler in der Konsole protokolliert.
+ *
+ * @returns {Object} Das geladene Datenobjekt oder ein leeres Objekt bei Fehler/nicht vorhandenem Eintrag.
+ */
 export function loadData() {
     let data = {};
     try {

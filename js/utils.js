@@ -19,6 +19,13 @@ export const formatMinutes = (minutes) => {
     return `${h} Std ${m} Min`;
 };
 
+/**
+ * Mischt ein Array in-place mit dem Fisher–Yates-Algorithmus.
+ *
+ * Das übergebene Array wird zufällig permutiert (Mutation des Eingabe-Arrays). Verwendet Math.random(), liefert daher nicht-deterministische Ergebnisse.
+ *
+ * @param {Array<any>} array - Das zu mischende Array; Elemente beliebigen Typs.
+ */
 export function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -26,6 +33,15 @@ export function shuffleArray(array) {
     }
 }
 
+/**
+ * Escapiert spezielle Zeichen in einer Eingabe für sichere Einbettung in HTML.
+ *
+ * Wandelt den übergebenen Wert in einen String und ersetzt die Zeichen
+ * &, <, >, " und ' durch ihre HTML-Entities (&amp;, &lt;, &gt;, &quot;, &#39;).
+ *
+ * @param {any} str - Beliebiger Wert; wird per String() in einen String konvertiert.
+ * @returns {string} Der HTML-escaped String.
+ */
 export function escapeHTML(str) {
     return String(str).replace(/[&<>\"']/g, (ch) => (
         { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
