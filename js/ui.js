@@ -5,6 +5,12 @@ import { openModal } from './events.js';
 import { toggleTask, deleteTask } from './tasks.js';
 import { updateMetaBar } from './theme.js';
 
+/**
+ * Rendert die gesamte Benutzeroberfläche neu.
+ *
+ * Führt nacheinander die Teil-Renderer für Zeit-Tracker, Wochenziel, Streak und Plan aus
+ * und aktualisiert anschliessend die Anzeige der Coins sowie die Meta-Leiste.
+ */
 export function renderAllUI() {
     renderTimeTracker();
     renderWeeklyGoalTracker();
@@ -14,6 +20,16 @@ export function renderAllUI() {
     updateMetaBar();
 }
 
+/**
+ * Rendert die PC-Zeit-Übersicht für die aktuelle Woche in das Element mit der ID "pc-time-tracker".
+ *
+ * Liest den aktuellen State (Tasks und pcStundenGesamt), summiert die als erledigt markierten PC-Aufgaben
+ * innerhalb der laufenden Woche (nach Datum) und berechnet daraus verbrauchte Minuten, verbleibende Minuten
+ * sowie den Fortschritt (0–100%). Überschreibt das HTML des Containers und zeigt einen Kreis-Progress,
+ * verbleibende Zeit und einen Einstellungsbutton an.
+ *
+ * Nebenwirkung: Überschreibt innerHTML des DOM-Elements mit id "pc-time-tracker".
+ */
 export function renderTimeTracker() {
     const { tasks, pcStundenGesamt } = getState();
     const container = document.getElementById('pc-time-tracker');
@@ -52,6 +68,18 @@ export function renderTimeTracker() {
         </div>`;
 }
 
+/**
+ * Rendert den Wochenziel-Tracker und aktualisiert das DOM-Element mit id "weekly-goal-tracker".
+ *
+ * Berechnet die Anzahl abgeschlossener Aufgaben in der aktuellen Woche (Felder: `erledigt` und `date` im ISO-Format),
+ * ermittelt den Fortschritt relativ zum in `getState().wochenZiel` gesetzten Ziel (auf 100% begrenzt)
+ * und schreibt eine zusammenfassende Anzeige inklusive Fortschrittsbalken in das Ziel-Element.
+ *
+ * Verhalten:
+ * - Zählt nur Tasks, deren `erledigt`-Flag true ist und deren `date` zwischen Start und Ende der aktuellen Woche liegt.
+ * - Wenn `wochenZiel` <= 0 wird der Fortschritt als 0% behandelt.
+ * - Aktualisiert direkt innerHTML des Elements `#weekly-goal-tracker`.
+ */
 export function renderWeeklyGoalTracker() {
     const { tasks, wochenZiel } = getState();
     const container = document.getElementById('weekly-goal-tracker');
@@ -76,6 +104,14 @@ export function renderWeeklyGoalTracker() {
         </div>`;
 }
 
+/**
+ * Rendert den Streak-Tracker im DOM.
+ *
+ * Liest die aktuelle Streak-Länge über getCurrentStreak() und aktualisiert das Element mit der ID
+ * "streak-tracker", um die Anzahl der aufeinanderfolgenden Tage visuell darzustellen.
+ *
+ * Hinweis: Erwartet, dass ein Element mit der ID "streak-tracker" im Dokument vorhanden ist.
+ */
 export function renderStreakTracker() {
     const container = document.getElementById('streak-tracker');
     const streak = getCurrentStreak();
@@ -85,6 +121,20 @@ export function renderStreakTracker() {
         <div class="text-sm text-secondary">Tage in Folge</div>`;
 }
 
+/**
+ * Rendert die vier Wochen-Planansichten, die Tageskarten und die Wochen-Navigation in das DOM.
+ *
+ * Baut dynamisch eine 4-Wochen-Ansicht (jeweils 7 Tage) und fügt für jeden Tag eine Tageskarte
+ * mit Datum, Tages-Punktezähler und einem Container für Aufgaben (`aufgaben-liste-YYYY-MM-DD`) hinzu.
+ * Erzeugt außerdem passende Navigationsbuttons ("Woche 1" … "Woche 4") und hängt diese in
+ * die Elemente mit den IDs `wochen-container` bzw. `wochen-nav`.
+ *
+ * Nebenwirkungen:
+ * - Aktualisiert das DOM (Elemente innerhalb von `wochen-container` und `wochen-nav`).
+ * - Setzt `aktiveWoche` im Zustand, falls das aktuelle Datum innerhalb einer der erzeugten Wochen liegt.
+ * - Ruft `renderAllTasks()` auf, um Aufgaben in die jeweiligen Tages-Container zu rendern.
+ * - Ruft `showWoche(aktiveWoche)` auf, um die aktuell aktive Woche sichtbar zu machen.
+ */
 export function renderPlan() {
     const { aktiveWoche } = getState();
     const wochenContainer = document.getElementById('wochen-container');
@@ -137,6 +187,14 @@ export function renderPlan() {
     showWoche(aktiveWoche);
 }
 
+/**
+ * Wechselt die angezeigte Wochenansicht und setzt die aktive Woche im Anwendungszustand.
+ *
+ * Versteckt alle Wochenansichten, zeigt die Woche mit der ID `woche-<index>` an und aktualisiert
+ * die Stil-Klassen der Navigations-Buttons, sodass der Button zur aktiven Woche hervorgehoben wird.
+ *
+ * @param {number} index - Index der anzuzeigenden Woche (verwendet für `woche-<index>` und die Datenattribute der Nav-Buttons).
+ */
 export function showWoche(index) {
     updateState({ aktiveWoche: index });
     document.querySelectorAll('.wochen-ansicht').forEach(el => el.classList.add('hidden'));
@@ -150,6 +208,25 @@ export function showWoche(index) {
     });
 }
 
+/**
+ * Rendert alle Aufgabenlisten im DOM und initialisiert Drag-&-Drop für deren Neuanordnung.
+ *
+ * Liest die Aufgaben aus dem globalen State, füllt für jedes Element mit einer ID im Format
+ * `aufgaben-liste-<ISO-Datum>` die entsprechenden Task-Elemente (oder einen Empty-State),
+ * initialisiert einmalig Sortable für Drag-&-Drop und schreibt nach einer Umordnung die
+ * neue Reihenfolge zurück in den State.
+ *
+ * Seiteneffekte:
+ * - Manipuliert direkt das DOM (befüllt Listen, fügt Platzhalter ein).
+ * - Initialisiert Sortable auf Listenelementen und setzt `data-sortable-init="1"` zur Vermeidung
+ *   mehrfacher Initialisierungen.
+ * - Aktualisiert den globalen State (`updateState`) mit der neuen Aufgabenreihenfolge.
+ * - Ruft `updatePunkteAnzeige()` auf, um die Tagespunktanzeige zu aktualisieren.
+ *
+ * Voraussetzungen:
+ * - Aufgaben im State müssen ein `date`-Feld im ISO-Datum-Format enthalten.
+ * - Listen-Elemente müssen IDs im Format `aufgaben-liste-<ISO-Datum>` haben.
+ */
 export function renderAllTasks() {
     const { tasks } = getState();
     document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
@@ -198,6 +275,22 @@ export function renderAllTasks() {
     updatePunkteAnzeige();
 }
 
+/**
+ * Erzeugt und gibt ein DOM-Element für eine Aufgabenkarte zurück.
+ *
+ * Das Element enthält Icon, Namen, optional die Dauer (für Kategorie 'pc'), ein Farb-Badge,
+ * sowie Aktionsbuttons zum Bearbeiten, Als-erledigt-markieren (zeigt ein Häkchen, wenn erledigt)
+ * und Löschen. Die Karte bekommt die CSS-Klasse `task-card`, ein data-Attribut `data-task-id`
+ * und Klassen/Attribute entsprechend dem Erledigt-Status.
+ *
+ * @param {Object} task - Aufgabenobjekt mit den nötigen Feldern.
+ * @param {string|number} task.id - Eindeutige ID der Aufgabe (wird in data-task-id gesetzt).
+ * @param {string} task.name - Anzeigename der Aufgabe.
+ * @param {'pc'|'schule'|'freizeit'} task.kategorie - Kategorie, beeinflusst Icon, Badge-Text und Daueranzeige.
+ * @param {boolean} task.erledigt - Gibt an, ob die Aufgabe bereits erledigt ist; beeinflusst Styling und Done-Button.
+ * @param {number} [task.durationInMinutes] - Optional: Dauer in Minuten (nur sichtbar für Kategorie 'pc').
+ * @return {HTMLElement} Die zusammengesetzte DOM-Elementstruktur der Aufgabenkarte.
+ */
 function createTaskElement(task) {
     const details = kategorieDetails[task.kategorie];
     const element = document.createElement('div');
@@ -255,11 +348,26 @@ function createTaskElement(task) {
     return element;
 }
 
+/**
+ * Gibt die Anzahl der an einem bestimmten Tag erledigten Aufgaben zurück.
+ *
+ * @param {string} isoDate - Datum im ISO-Format (YYYY-MM-DD), für das die erledigten Aufgaben gezählt werden.
+ * @return {number} Anzahl der erledigten Aufgaben an diesem Datum.
+ */
 export function getPunkteFuerTag(isoDate) {
     const { tasks } = getState();
     return tasks.filter(t => t.date === isoDate && t.erledigt).length;
 }
 
+/**
+ * Aktualisiert die Punktezahlen in allen Tageskarten.
+ *
+ * Geht alle Elemente mit der Klasse `tag-karte` durch und setzt den Inhalt des jeweiligen
+ * `.day-score`-Elements auf ein Stern-Icon gefolgt von der Punktzahl, wie sie
+ * von `getPunkteFuerTag(card.id)` zurückgegeben wird.
+ *
+ * Hinweis: Führt direkte DOM-Manipulationen aus; gibt keinen Wert zurück.
+ */
 export function updatePunkteAnzeige() {
     document.querySelectorAll('.tag-karte').forEach(card => {
         const anzeige = card.querySelector('.day-score');
@@ -267,6 +375,14 @@ export function updatePunkteAnzeige() {
     });
 }
 
+/**
+ * Scrollt die horizontale Tagesliste so, dass das Element mit der Klasse `today-card` sichtbar wird.
+ *
+ * Sucht das erste Element mit `.today-card`. Falls dessen direkter Elterncontainer die Klasse `flex` besitzt,
+ * wird horizontal zu dieser Karte gescrollt (mit leichtem 5%-Offset zur Breite des Containers) und die Bewegung
+ * erfolgt smooth. Hat kein `today-card`-Element gefunden oder ist der Elterncontainer nicht horizontal (`flex`),
+ * passiert nichts.
+ */
 export function scrollToCurrentDay() {
     const todayEl = document.querySelector('.today-card');
     if (todayEl) {
@@ -277,6 +393,15 @@ export function scrollToCurrentDay() {
     }
 }
 
+/**
+ * Erzeugt und platziert einen visuellen "Ripple"-Effekt in einem Button an der Klickposition.
+ *
+ * Fügt ein kreisförmiges <span>-Element mit der Klasse `ripple` in das übergebene Button-Element ein,
+ * positioniert es basierend auf den Client-Koordinaten des Events und entfernt zuvor vorhandene Ripples.
+ *
+ * @param {HTMLElement} button - Das DOM-Element (z. B. ein Button), in dem der Ripple eingefügt wird.
+ * @param {MouseEvent} event - Das Mausklick-Event; dessen clientX/clientY bestimmen die Position des Effekts.
+ */
 export function createRipple(button, event) {
     const circle = document.createElement("span");
     const diameter = Math.max(button.clientWidth, button.clientHeight);
@@ -295,6 +420,14 @@ export function createRipple(button, event) {
     button.appendChild(circle);
 }
 
+/**
+ * Startet eine kurze Konfetti-Animation mit Sound.
+ *
+ * Fügt bis zu 50 farbige Konfetti-Elemente in das DOM-Element mit der ID "konfetti-container" ein,
+ * spielt einen kurzen Konfetti-Sound und entfernt die Konfetti-Elemente nach etwa 3 Sekunden.
+ *
+ * Hinweis: Das Element mit der ID "konfetti-container" muss im DOM vorhanden sein.
+ */
 export function starteKonfetti() {
     sounds.confetti.triggerAttackRelease("G4", "0.4");
     const container = document.getElementById('konfetti-container');
@@ -310,6 +443,12 @@ export function starteKonfetti() {
     }
 }
 
+/**
+ * Aktualisiert die im UI angezeigte Münzanzahl.
+ *
+ * Liest die aktuelle `coins`-Zahl aus dem Anwendungszustand und setzt den Textinhalt
+ * des DOM-Elements mit der ID `coins-count` auf diesen Wert.
+ */
 export function updateCoinsDisplay() {
     const { coins } = getState();
     document.getElementById('coins-count').textContent = coins;
@@ -317,6 +456,16 @@ export function updateCoinsDisplay() {
 
 export const updateMotivationsspruch = () => document.getElementById('motivations-spruch').textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
 
+/**
+ * Berechnet die aktuelle Tagesserie (Streak) abgeschlossener Aufgaben.
+ *
+ * Zählt, wie viele aufeinanderfolgende Tage (beginnend bei heute) mindestens eine
+ * erledigte Aufgabe haben. Mehrere erledigte Aufgaben am selben Tag werden als
+ * ein Tag gezählt. Die Funktion ignoriert Uhrzeiten (vergleicht nur Datumsteile)
+ * und stoppt beim ersten Tag ohne erledigte Aufgabe.
+ *
+ * @return {number} Anzahl aufeinanderfolgender Tage mit mindestens einer erledigten Aufgabe (Streak).
+ */
 export function getCurrentStreak() {
     const { tasks } = getState();
     const sorted = [...tasks].filter(t => t.erledigt).sort((a, b) => new Date(b.date) - new Date(a.date));

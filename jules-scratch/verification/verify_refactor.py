@@ -3,6 +3,11 @@ from playwright.async_api import async_playwright
 import os
 
 async def main():
+    """
+    Startet einen headless Chromium-Browser, lädt die lokale Datei `index.html` und speichert einen Screenshot.
+    
+    Die Funktion öffnet einen Chromium-Browser über Playwright (asynchron), navigiert zur lokal ermittelten Datei `index.html` (absolute Dateipfad-URL), wartet bis der Ladevorgang den Zustand `networkidle` erreicht und schreibt einen Screenshot nach `jules-scratch/verification/verification.png`. Ressourcen werden über den async Playwright-Kontext verwaltet; auftretende Ausnahmen werden nicht abgefangen und propagiert.
+    """
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
