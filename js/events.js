@@ -51,6 +51,7 @@ export function initEventListeners() {
         // Week navigation
         if (navButton) {
             updateState({ aktiveWoche: parseInt(navButton.dataset.weekIndex) });
+            showWoche();
         }
 
         // Quiz answer
