@@ -303,7 +303,7 @@ export function scrollToCurrentDay() {
  */
 export function starteKonfetti() {
     const { sounds } = getState();
-    if (sounds && sounds.confetti) {
+    if (sounds && sounds.confetti && typeof sounds.confetti.triggerAttackRelease === "function") {
         sounds.confetti.triggerAttackRelease("G4", "0.4");
     }
     const container = document.getElementById('konfetti-container');
