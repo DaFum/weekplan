@@ -36,7 +36,12 @@ document.addEventListener("DOMContentLoaded", () => {
     subscribe("tasks", state => {
         updateTasksUI(state);
         updateMetaBar(state);
-        saveData(state);
+    // Debounce saveData for frequent task updates
+    const debouncedSaveData = debounce(saveData, 300);
+    subscribe("tasks", state => {
+        updateTasksUI(state);
+        updateMetaBar(state);
+        debouncedSaveData(state);
     });
 
     subscribe("pcStundenGesamt", state => {
