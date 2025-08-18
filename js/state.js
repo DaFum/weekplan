@@ -1,4 +1,4 @@
-const state = {
+let state = {
     tasks: [],
     aktiveWoche: 0,
     pcStundenGesamt: 0,
@@ -7,44 +7,52 @@ const state = {
     promptCallback: null,
     coins: 0,
     currentGame: null,
-    theme: 'light'
+    theme: "light",
+
+    // Game state
+    memory: {
+        cards: [],
+        flippedCards: [],
+        matchedPairs: 0,
+        score: 0,
+        matchedSymbols: []
+    },
+    quiz: {
+        currentQuestion: 0,
+        score: 0,
+        questions: []
+    }
 };
 
 const listeners = [];
 
-/**
- * Gibt eine flache Kopie des internen Zustands zurück.
- *
- * Liefert ein neues Objekt mit den aktuellen State-Feldern (shallow copy), damit Aufrufer den internen Zustand nicht direkt mutieren.
- * Änderungen am State müssen über die dafür vorgesehenen Funktionen vorgenommen werden.
- * @returns {Object} Eine flache Kopie des aktuellen State-Objekts.
- */
 export function getState() {
     return { ...state };
 }
 
 /**
- * Aktualisiert den internen Zustand mit den angegebenen Eigenschaften und benachrichtigt alle Abonnenten.
+ * Aktualisiert den internen Zustand und benachrichtigt gezielt die Abonnenten, deren
+ * abonnierte State-Teile sich geändert haben.
  *
- * Führt eine flache Zusammenführung der übergebenen `newState`-Eigenschaften in das Modul-Scoped `state` durch
- * (vorhandene Felder werden überschrieben) und löst anschließend die Registrierungscallbacks aus.
- *
- * @param {Object} newState - Teilobjekt mit Zustandsfeldern, die hinzugefügt oder überschrieben werden sollen.
+ * @param {Object} newState - Ein Objekt mit den zu aktualisierenden Schlüsseln.
  */
 export function updateState(newState) {
-    Object.assign(state, newState);
-    notifyListeners();
+    const oldState = { ...state };
+    state = { ...state, ...newState };
+    notifyListeners(newState, oldState);
 }
 
 /**
- * Registriert einen Listener, der bei Zustandsänderungen benachrichtigt wird, und liefert eine Funktion zum Abbestellen.
- * @param {function(Object):void} listener - Callback, das die aktuelle (flache) Zustandkopie als Argument erhält.
- * @return {function():void} Funktion, die beim Aufruf die Registrierung des Listeners entfernt.
+ * Registriert einen Listener für Änderungen an einem bestimmten Teil des States.
+ *
+ * @param {string|null} key - Der Schlüssel im State, auf den gehört werden soll. Wenn null, wird der Listener bei jeder Änderung aufgerufen.
+ * @param {function(Object):void} callback - Die Funktion, die bei Änderungen aufgerufen wird.
+ * @returns {function():void} Eine Funktion, um das Abonnement zu beenden.
  */
-export function subscribe(listener) {
-    listeners.push(listener);
-    return function unsubscribe() {
-        const index = listeners.indexOf(listener);
+export function subscribe(key, callback) {
+    listeners.push({ key, callback });
+    return () => {
+        const index = listeners.findIndex(l => l.key === key && l.callback === callback);
         if (index > -1) {
             listeners.splice(index, 1);
         }
@@ -52,13 +60,24 @@ export function subscribe(listener) {
 }
 
 /**
- * Benachrichtigt alle registrierten Listener synchron mit dem aktuellen State.
+ * Benachrichtigt die Listener, deren abonnierte Daten sich geändert haben.
  *
- * Ruft jeden in der internen `listeners`-Liste gespeicherten Listener auf und übergibt ihm eine Kopie des aktuellen Zustands (via `getState()`).
- * Aufruf erfolgt synchron; Exceptions, die von einem Listener geworfen werden, werden nicht abgefangen und propagieren weiter.
+ * @param {Object} newState - Das Objekt mit den neuen State-Werten.
+ * @param {Object} oldState - Der Zustand vor der Aktualisierung.
  */
-function notifyListeners() {
-    for (const listener of listeners) {
-        listener(getState());
-    }
+function notifyListeners(newState, oldState) {
+    const changedKeys = Object.keys(newState).filter(key => newState[key] !== oldState[key]);
+
+    if (changedKeys.length === 0) return;
+
+    listeners.forEach(({ key, callback }) => {
+        // Globale Listener (key === null) oder Listener für geänderte Schlüssel benachrichtigen
+        if (key === null || changedKeys.includes(key)) {
+            try {
+                callback(state);
+            } catch (e) {
+                console.error(`Fehler im Listener für key "${key}":`, e);
+            }
+        }
+    });
 }

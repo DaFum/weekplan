@@ -1,5 +1,5 @@
-import { getStartOfWeek, getISODate } from './utils.js';
-import { getState, updateState } from './state.js';
+import { getStartOfWeek, getISODate } from "./utils.js";
+import { getState, updateState } from "./state.js";
 
 /**
  * Schaltet das App-Theme zwischen 'dark' und 'light'.
@@ -9,7 +9,7 @@ import { getState, updateState } from './state.js';
  */
 export function toggleTheme() {
     const state = getState();
-    const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+    const newTheme = state.theme === "dark" ? "light" : "dark";
     updateState({ theme: newTheme });
 }
 
@@ -20,10 +20,10 @@ export function toggleTheme() {
  * @param {string} theme - Erwartet `'dark'` zum Aktivieren des Dark-Modes; jeder andere Wert schaltet in den Light-Mode.
  */
 export function updateTheme(theme) {
-    if (theme === 'dark') {
-        document.body.classList.add('dark');
+    if (theme === "dark") {
+        document.body.classList.add("dark");
     } else {
-        document.body.classList.remove('dark');
+        document.body.classList.remove("dark");
     }
     updateThemeIcons(theme);
 }
@@ -37,8 +37,8 @@ export function updateTheme(theme) {
  * @param {string} theme - Erwartet den Theme-Namen, z. B. `'dark'` oder `'light'`.
  */
 function updateThemeIcons(theme) {
-    const isDark = theme === 'dark';
-    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '🌞';
+    const isDark = theme === "dark";
+    document.getElementById("theme-icon").textContent = isDark ? "🌙" : "🌞";
 }
 
 /**
@@ -46,8 +46,7 @@ function updateThemeIcons(theme) {
  *
  * Ermittelt aus dem globalen Zustand die Aufgaben und das Wochenziel, zählt die innerhalb der aktuellen Kalenderwoche erledigten Aufgaben und berechnet daraus einen Prozentwert (0–100, 0 falls wochenZiel <= 0). Setzt anschließend document.title auf "<percent>% · Wochen-Power" und aktualisiert das Meta-Tag mit der id "themeMeta" auf Grün ('#10b981') bei 100% oder mehr, sonst Blau ('#0284c7').
  */
-export function updateMetaBar() {
-    const state = getState();
+export function updateMetaBar(state) {
     const { tasks, wochenZiel } = state;
     const start = getStartOfWeek(new Date());
     const end = new Date(start); end.setDate(end.getDate() + 7);
@@ -56,5 +55,5 @@ export function updateMetaBar() {
       ? Math.max(0, Math.min(100, Math.round((done / wochenZiel) * 100)))
       : 0;
     document.title = `${percent}% · Wochen-Power`;
-    document.getElementById('themeMeta').setAttribute('content', percent >= 100 ? '#10b981' : '#0284c7');
+    document.getElementById("themeMeta").setAttribute("content", percent >= 100 ? "#10b981" : "#0284c7");
 }

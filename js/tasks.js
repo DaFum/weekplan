@@ -1,9 +1,8 @@
-import { getState, updateState } from './state.js';
-import { renderAllUI } from './ui.js';
-import { addCoins } from './games.js';
-import { starteKonfetti } from './ui.js';
-import { closeModal } from './events.js';
-import { formatDisplayDate } from './utils.js';
+import { getState, updateState } from "./state.js";
+import { addCoins } from "./games.js";
+import { starteKonfetti } from "./ui.js";
+import { closeModal, openPromptModal } from "./events.js";
+import { formatDisplayDate, getISODate, getStartOfWeek } from "./utils.js";
 
 /**
  * Speichert ein Task-Formular: erstellt eine neue Aufgabe oder aktualisiert eine bestehende.
@@ -19,13 +18,13 @@ import { formatDisplayDate } from './utils.js';
  */
 export function saveTask(event) {
     event.preventDefault();
-    const taskId = document.getElementById('task-id').value;
+    const taskId = document.getElementById("task-id").value;
     const kategorie = document.querySelector('input[name="kategorie"]:checked').value;
     const taskData = {
-        name: document.getElementById('task-name').value,
+        name: document.getElementById("task-name").value,
         kategorie: kategorie,
-        date: document.getElementById('task-date').value,
-        durationInMinutes: kategorie === 'pc' ? parseInt(document.getElementById('task-duration').value) || 0 : 0
+        date: document.getElementById("task-date").value,
+        durationInMinutes: kategorie === "pc" ? parseInt(document.getElementById("task-duration").value) || 0 : 0
     };
 
     const { tasks } = getState();
@@ -37,16 +36,16 @@ export function saveTask(event) {
             updateState({ tasks: newTasks });
         }
     } else {
-        updateState({ tasks: [...tasks, { ...taskData, id: 'task-' + Date.now(), erledigt: false }] });
+        const newId = "task-" + Date.now();
+        updateState({ tasks: [...tasks, { ...taskData, id: newId, erledigt: false }] });
 
-        if (Notification.permission === 'granted') {
+        if (Notification.permission === "granted") {
             new Notification(`Neue Aufgabe: ${taskData.name}`, {
                 body: `Am ${formatDisplayDate(new Date(taskData.date))}`,
-                icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png'
+                icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png"
             });
         }
     }
-    renderAllUI();
     closeModal();
 }
 
@@ -61,16 +60,20 @@ export function saveTask(event) {
  */
 export function toggleTask(taskId) {
     const { tasks, sounds } = getState();
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-        task.erledigt = !task.erledigt;
-        if (task.erledigt) {
-            sounds.complete.triggerAttackRelease("C4", "0.2");
-            starteKonfetti();
-            addCoins(5);
+    const newTasks = tasks.map(task => {
+        if (task.id === taskId) {
+            const wasErledigt = task.erledigt;
+            const newErledigt = !wasErledigt;
+            if (newErledigt) {
+                sounds.complete.triggerAttackRelease("C4", "0.2");
+                starteKonfetti();
+                addCoins(5);
+            }
+            return { ...task, erledigt: newErledigt };
         }
-        updateState({ tasks: [...tasks] });
-    }
+        return task;
+    });
+    updateState({ tasks: newTasks });
 }
 
 /**
@@ -96,4 +99,42 @@ export function cleanupOldTasks() {
     const { tasks } = getState();
     const startOfCurrentWeekISO = getISODate(getStartOfWeek(new Date()));
     updateState({ tasks: tasks.filter(task => task && task.date && task.date >= startOfCurrentWeekISO) });
+}
+
+/**
+ * Öffnet ein Modal, um das PC-Zeitlimit (in Stunden) für die Woche festzulegen.
+ *
+ * Ruft `openPromptModal` auf, um den Benutzer nach der Anzahl der Stunden zu fragen.
+ * Der aktuelle Wert wird aus dem State (`pcStundenGesamt`) gelesen. Nach der Eingabe
+ * wird der State mit dem neuen Wert aktualisiert.
+ */
+export function setPcTimeLimit() {
+    const { pcStundenGesamt } = getState();
+    openPromptModal(
+        "PC-Zeitlimit festlegen",
+        "Wie viele Stunden PC-Zeit pro Woche?",
+        pcStundenGesamt,
+        (value) => {
+            updateState({ pcStundenGesamt: Number(value) });
+        }
+    );
+}
+
+/**
+ * Öffnet ein Modal, um das Wochenziel (Anzahl der Aufgaben) festzulegen.
+ *
+ * Ruft `openPromptModal` auf, um den Benutzer nach der Anzahl der zu erledigenden
+ * Aufgaben zu fragen. Der aktuelle Wert wird aus dem State (`wochenZiel`) gelesen.
+ * Nach der Eingabe wird der State mit dem neuen Wert aktualisiert.
+ */
+export function setWeeklyGoal() {
+    const { wochenZiel } = getState();
+    openPromptModal(
+        "Wochenziel festlegen",
+        "Wie viele Aufgaben pro Woche?",
+        wochenZiel,
+        (value) => {
+            updateState({ wochenZiel: Number(value) });
+        }
+    );
 }
