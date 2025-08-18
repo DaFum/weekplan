@@ -130,7 +130,7 @@ export function renderPlan() {
 
         const wochenAnsicht = document.createElement('div');
         wochenAnsicht.id = `woche-${week}`;
-        wochenAnsicht.className = 'wochen-ansicht'; // Is visible by default now
+        wochenAnsicht.className = 'wochen-ansicht hidden'; // Hidden by default
 
         const tagesContainer = document.createElement('div');
         tagesContainer.className = 'tag-container flex overflow-x-auto pb-4 space-x-4 px-1';
