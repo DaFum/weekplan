@@ -25,6 +25,7 @@ let state = {
 };
 
 const listeners = [];
+let nextListenerId = 0;
 
 export function getState() {
     return { ...state };
@@ -50,9 +51,10 @@ export function updateState(newState) {
  * @returns {function():void} Eine Funktion, um das Abonnement zu beenden.
  */
 export function subscribe(key, callback) {
-    listeners.push({ key, callback });
+    const id = nextListenerId++;
+    listeners.push({ id, key, callback });
     return () => {
-        const index = listeners.findIndex(l => l.key === key && l.callback === callback);
+        const index = listeners.findIndex(l => l.id === id);
         if (index > -1) {
             listeners.splice(index, 1);
         }
@@ -66,7 +68,7 @@ export function subscribe(key, callback) {
  * @param {Object} oldState - Der Zustand vor der Aktualisierung.
  */
 function notifyListeners(newState, oldState) {
-    const changedKeys = Object.keys(newState).filter(key => newState[key] !== oldState[key]);
+    const changedKeys = Object.keys(newState).filter(key => JSON.stringify(newState[key]) !== JSON.stringify(oldState[key]));
 
     if (changedKeys.length === 0) return;
 

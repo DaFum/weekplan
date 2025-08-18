@@ -13,7 +13,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateState({
         ...savedData,
-        theme
+        theme,
+        aktiveWoche: 0
     });
 
     initEventListeners();

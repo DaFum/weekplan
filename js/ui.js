@@ -337,8 +337,9 @@ export function createRipple(button, event) {
 
 export function starteKonfetti() {
     const { sounds } = getState();
-    sounds.confetti.triggerAttackRelease("G4", "0.4");
+    sounds.confetti?.triggerAttackRelease("G4", "0.4");
     const container = document.getElementById("konfetti-container");
+    if (!container) return;
     for (let i = 0; i < 50; i++) {
         const konfetti = document.createElement("div");
         konfetti.className = "konfetti-stueck";
