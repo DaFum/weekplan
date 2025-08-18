@@ -55,7 +55,7 @@ export function initEventListeners() {
 
     document.getElementById("task-form").addEventListener("submit", (event) => {
         saveTask(event);
-        closeModal(); // Close modal after saving
+        // closeModal() is already called inside saveTask()
     });
 
     document.getElementById("prompt-form").addEventListener("submit", (event) => {
