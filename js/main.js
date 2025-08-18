@@ -16,7 +16,7 @@ function initApp() {
     // 1. Load and sanitize data
     let savedData = loadData();
     const initialState = {
-        tasks: Array.isArray(savedData.tasks) ? savedData.tasks : [],
+        tasks: Array.isArray(savedData.tasks) ? savedData.tasks.filter(Boolean) : [],
         pcStundenGesamt: Number.isFinite(savedData.pcStundenGesamt) ? savedData.pcStundenGesamt : 0,
         wochenZiel: Number.isFinite(savedData.wochenZiel) ? savedData.wochenZiel : 10,
         coins: Number.isFinite(savedData.coins) ? savedData.coins : 0,
