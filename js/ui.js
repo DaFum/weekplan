@@ -349,7 +349,7 @@ export function getCurrentStreak() {
     const erledigteTasks = tasks.filter(t => t.erledigt && t.date);
     if (erledigteTasks.length === 0) return 0;
 
-    const erledigteDaten = [...new Set(erledigteTasks.map(t => t.date))].sort().reverse();
+    const erledigteDaten = [...new Set(erledigteTasks.map(t => t.date))].sort();
 
     let streak = 0;
     let heute = new Date();
