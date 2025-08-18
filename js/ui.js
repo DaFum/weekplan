@@ -278,7 +278,7 @@ function createTaskElement(task) {
             <div class="flex-grow">
                 <div class="task-name">${task.name}</div>
                 ${task.kategorie === "pc" && task.durationInMinutes ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>` : ""}
-                <div class="task-category-badge ${details.color}">${details.label || task.kategorie}</div>
+                <div class="task-category-badge ${details.color}">${categoryLabels[task.kategorie] || task.kategorie}</div>
             </div>
         </div>
         <div class="task-actions mt-3 flex justify-end">
