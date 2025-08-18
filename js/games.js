@@ -150,15 +150,21 @@ function initQuizGame() {
 }
 
 export function checkQuizAnswer(selectedIndex) {
-    let { quiz, sounds } = getState();
+    const { quiz, sounds } = getState();
     const question = quiz.questions[quiz.currentQuestion];
+    const isCorrect = selectedIndex === question.answer;
 
-    if (selectedIndex === question.answer) {
-        quiz.score += 20;
+    if (isCorrect) {
         sounds.complete?.triggerAttackRelease("C5", "0.2");
     }
 
-    updateState({ quiz: { ...quiz, showResult: true } });
+    updateState({
+        quiz: {
+            ...quiz,
+            score: isCorrect ? quiz.score + 20 : quiz.score,
+            showResult: true
+        }
+    });
     renderQuiz(selectedIndex);
 }
 
