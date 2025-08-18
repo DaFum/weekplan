@@ -22,6 +22,7 @@ function initApp() {
         coins: Number.isFinite(savedData.coins) ? savedData.coins : 0,
         aktiveWoche: Number.isFinite(savedData.aktiveWoche) ? savedData.aktiveWoche : 0,
         theme: savedData.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+        sounds: {},
     };
 
     // 2. Determine the active week based on the current date
