@@ -44,11 +44,11 @@
                 </div>
             </div>
             <div class="game-grid">
-                <div id="open-memory-game" class="game-card bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+                <div id="open-memory-game" role="button" tabindex="0" aria-label="Memory öffnen" class="game-card bg-gradient-to-r from-blue-400 to-blue-600 text-white">
                     <div class="font-bold">Memory</div>
                     <div class="text-sm opacity-90">Finde Paare</div>
                 </div>
-                <div id="open-quiz-game" class="game-card bg-gradient-to-r from-green-400 to-green-600 text-white">
+                <div id="open-quiz-game" role="button" tabindex="0" aria-label="Quiz öffnen" class="game-card bg-gradient-to-r from-green-400 to-green-600 text-white">
                     <div class="font-bold">Quiz</div>
                     <div class="text-sm opacity-90">Wissenscheck</div>
                 </div>
@@ -59,7 +59,7 @@
         <main id="wochen-container" class="flex-grow"></main>
 
         <div class="floating-button">
-            <button id="open-task-modal" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:shadow-xl hover:bg-indigo-700 transform hover:scale-110 transition-all duration-300 pulse relative overflow-hidden">
+            <button id="open-task-modal" aria-label="Neue Aufgabe" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:shadow-xl hover:bg-indigo-700 transform hover:scale-110 transition-all duration-300 pulse relative overflow-hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-8 h-8">
                     <path fill-rule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clip-rule="evenodd" />
                 </svg>
@@ -68,7 +68,7 @@
     </div>
 
     <!-- Modal für Aufgaben -->
-    <div id="task-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end">
+    <div id="task-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content w-full max-w-lg mx-auto rounded-t-3xl p-6">
             <div class="modal-header">
                 <h2 id="modal-title" class="modal-title">Neue Aufgabe erstellen</h2>

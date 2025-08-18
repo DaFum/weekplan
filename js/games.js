@@ -1,5 +1,4 @@
 import { getState, updateState } from './state.js';
-import { updateCoinsDisplay } from './ui.js';
 import { shuffleArray } from './utils.js';
 import { quizQuestions } from './config.js';
 
@@ -21,8 +20,11 @@ let quizScore = 0;
 export function addCoins(amount) {
     const { coins } = getState();
     updateState({ coins: coins + amount });
-    document.querySelector('.coin').classList.add('level-up');
-    setTimeout(() => document.querySelector('.coin').classList.remove('level-up'), 1000);
+    const coinEl = document.querySelector('.coin');
+    if (coinEl) {
+        coinEl.classList.add('level-up');
+        setTimeout(() => coinEl.classList.remove('level-up'), 1000);
+    }
 }
 
 /**
@@ -100,7 +102,7 @@ function initMemoryGame() {
         card.className = 'memory-card bg-indigo-500 rounded-xl flex items-center justify-center text-2xl cursor-pointer transform transition-transform hover:scale-105 relative overflow-hidden';
         card.dataset.index = index;
         card.dataset.symbol = symbol;
-        card.innerHTML = '?';
+        card.textContent = '?';
         card.addEventListener('click', flipCard);
         board.appendChild(card);
     });
@@ -119,7 +121,7 @@ function flipCard() {
     if (this.classList.contains('flipped')) return;
 
     this.classList.add('flipped');
-    this.innerHTML = this.dataset.symbol;
+    this.textContent = this.dataset.symbol;
     memoryFlippedCards.push(this);
 
     if (memoryFlippedCards.length === 2) {
@@ -160,14 +162,16 @@ function checkMatch() {
         if (memoryMatchedPairs === 6) {
             addCoins(20);
             const { sounds } = getState();
-            sounds.confetti.triggerAttackRelease("C5", "0.5");
+            if (sounds && sounds.confetti && typeof sounds.confetti.triggerAttackRelease === 'function') {
+                sounds.confetti.triggerAttackRelease("C5", "0.5");
+            }
         }
     } else {
         setTimeout(() => {
             card1.classList.remove('flipped');
             card2.classList.remove('flipped');
-            card1.innerHTML = '?';
-            card2.innerHTML = '?';
+            card1.textContent = '?';
+            card2.textContent = '?';
         }, 500);
     }
     memoryFlippedCards = [];
@@ -183,8 +187,8 @@ function initQuizGame() {
     currentQuizQuestion = 0;
     quizScore = 0;
     document.getElementById('quiz-score').textContent = quizScore;
-    document.getElementById('quiz-progress').textContent = `${currentQuizQuestion + 1}/5`;
-    document.getElementById('quiz-progress-bar').style.width = '20%';
+    document.getElementById('quiz-progress').textContent = `${currentQuizQuestion + 1}/${quizQuestions.length}`;
+    document.getElementById('quiz-progress-bar').style.width = `${((currentQuizQuestion + 1) / quizQuestions.length) * 100}%`;
     showQuizQuestion();
 }
 
@@ -235,7 +239,9 @@ export function checkQuizAnswer(selectedIndex) {
         quizScore += 20;
         document.getElementById('quiz-score').textContent = quizScore;
         const { sounds } = getState();
-        sounds.complete.triggerAttackRelease("C5", "0.2");
+        if (sounds && sounds.complete && typeof sounds.complete.triggerAttackRelease === 'function') {
+            sounds.complete.triggerAttackRelease("C5", "0.2");
+        }
     }
 
     document.getElementById('quiz-next').classList.remove('hidden');
@@ -252,7 +258,7 @@ export function checkQuizAnswer(selectedIndex) {
 function nextQuizQuestion() {
     currentQuizQuestion++;
     if (currentQuizQuestion < quizQuestions.length) {
-        document.getElementById('quiz-progress').textContent = `${currentQuizQuestion + 1}/5`;
+        document.getElementById('quiz-progress').textContent = `${currentQuizQuestion + 1}/${quizQuestions.length}`;
         document.getElementById('quiz-progress-bar').style.width = `${((currentQuizQuestion + 1) / quizQuestions.length) * 100}%`;
         showQuizQuestion();
     } else {

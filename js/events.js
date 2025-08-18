@@ -1,27 +1,24 @@
 import { toggleTheme } from './theme.js';
-import { createRipple, showWoche } from './ui.js';
 import { setPcTimeLimit, setWeeklyGoal, toggleTask, deleteTask, saveTask } from './tasks.js';
 import { getState, updateState } from './state.js';
-import { getISODate, formatDisplayDate } from './utils.js';
-import { getStartOfWeek } from './utils.js';
+import { getISODate, formatDisplayDate, getStartOfWeek, createRipple } from './utils.js';
 import { openGame, closeGame, checkQuizAnswer } from './games.js';
 
 /**
  * Initialisiert zentrale Event-Handler für die Benutzeroberfläche.
- *
- * Hängt einen delegierten Klick-Listener an das Dokument an und registriert Submit-Handler für die beiden Formulare.
- * Der Klick-Listener leitet Aktionen an die jeweiligen Handler weiter: Öffnen/Schließen von Task- und Prompt-Modals,
- * Spiel-Öffner/Schließer, Einstellungsaktionen (PC-Zeit, Wochenziel), Theme-Umschaltung, Interaktionen an dynamischen
- * Task-Karten (Bearbeiten, Erledigen, Löschen), Wochen-Navigation, Quiz-Antworten sowie das Erzeugen von Button-Ripple-Effekten.
- * Der Submit-Handler des Prompt-Forms validiert numerische Eingaben und ruft einen in den State gespeicherten Callback mit dem Wert auf.
- *
- * Nebenwirkungen:
- * - Fügt dauerhafte Event-Listener an document.body und an die Form-Elemente hinzu.
- * - Nutzt und verändert globalen Zustand über getState/updateState (z. B. für Prompt-Callback).
  */
 export function initEventListeners() {
     document.body.addEventListener('click', function(event) {
         const target = event.target;
+        const taskCard = target.closest('.task-card');
+        const taskCardButton = target.closest('.task-card-button');
+        const navButton = target.closest('.nav-button');
+        const quizOption = target.closest('.quiz-option');
+        const btn = target.closest('button');
+
+        if (btn) {
+            createRipple(btn, event);
+        }
 
         // Modals
         if (target.closest('#open-task-modal')) openModal();
@@ -42,35 +39,33 @@ export function initEventListeners() {
         // Theme
         if (target.closest('#theme-toggle')) toggleTheme();
 
-        // Dynamic elements
-        const taskCard = target.closest('.task-card');
-        if (taskCard) {
+        // Task card actions
+        if (taskCardButton && taskCard) {
             const taskId = taskCard.dataset.taskId;
-            if (target.closest('.task-card-button[aria-label="Bearbeiten"]')) openModal(taskId);
-            if (target.closest('.task-card-button[aria-label*="erledigt"]')) toggleTask(taskId);
-            if (target.closest('.task-card-button[aria-label="Löschen"]')) deleteTask(taskId);
+            const action = taskCardButton.dataset.action;
+            if (action === 'edit') openModal(taskId);
+            if (action === 'toggle') toggleTask(taskId);
+            if (action === 'delete') deleteTask(taskId);
         }
 
-        const navButton = target.closest('.nav-button');
+        // Week navigation
         if (navButton) {
-            showWoche(parseInt(navButton.dataset.weekIndex));
+            updateState({ aktiveWoche: parseInt(navButton.dataset.weekIndex) });
         }
 
-        const quizOption = target.closest('.quiz-option');
+        // Quiz answer
         if (quizOption) {
             checkQuizAnswer(parseInt(quizOption.dataset.index));
         }
-
-        const btn = event.target.closest('button');
-        if (btn) createRipple(btn, event);
     });
 
     document.getElementById('task-form').addEventListener('submit', saveTask);
     document.getElementById('prompt-form').addEventListener('submit', (event) => {
         event.preventDefault();
         const { promptCallback } = getState();
-        const value = document.getElementById('prompt-modal-input').value;
-        if (promptCallback && value !== null && !isNaN(value) && value >= 0) {
+        const raw = document.getElementById('prompt-modal-input').value;
+        const value = raw === '' ? null : Number(raw);
+        if (promptCallback && Number.isFinite(value) && value >= 0) {
             promptCallback(value);
         }
         closePromptModal();
@@ -79,29 +74,24 @@ export function initEventListeners() {
 
 /**
  * Öffnet das Aufgaben-Modal zum Anlegen oder Bearbeiten einer Aufgabe.
- *
- * Wenn `taskId` angegeben ist, füllt die Funktion das Formular mit den Daten
- * der vorhandenen Aufgabe und setzt den Modal-Titel auf "Aufgabe bearbeiten".
- * Ohne `taskId` bleibt das Formular zurückgesetzt und der Titel lautet
- * "Neue Aufgabe erstellen".
- *
- * Außerdem baut die Funktion die Datums-Auswahl als vier Wochen (je 7 Tage)
- * beginnend mit dem Start der aktuellen Woche auf, initialisiert die
- * Kategorieradio-Styling-Logik, zeigt das Modal an und setzt den Body-Status
- * auf modal-open.
- *
- * @param {string|null} taskId - Optional: ID der zu bearbeitenden Aufgabe. Wenn null, wird ein leeres Formular für eine neue Aufgabe angezeigt.
  */
 export function openModal(taskId = null) {
     const modal = document.getElementById('task-modal');
+    if (!modal) return;
     const form = document.getElementById('task-form');
     form.reset();
+
     const title = document.getElementById('modal-title');
     const idInput = document.getElementById('task-id');
 
     if (taskId) {
         const { tasks } = getState();
         const task = tasks.find(t => t.id === taskId);
+        if (!task) {
+            console.warn(`Task mit ID ${taskId} nicht gefunden.`);
+            closeModal();
+            return;
+        }
         title.textContent = "Aufgabe bearbeiten";
         idInput.value = task.id;
         document.getElementById('task-name').value = task.name;
@@ -122,7 +112,8 @@ export function openModal(taskId = null) {
         const optgroup = document.createElement('optgroup');
         optgroup.label = `Woche ${week + 1}`;
         for (let day = 0; day < 7; day++) {
-            const currentDate = new Date(startOfWeek); currentDate.setDate(currentDate.getDate() + week * 7 + day);
+            const currentDate = new Date(startOfWeek);
+            currentDate.setDate(currentDate.getDate() + week * 7 + day);
             const isoDate = getISODate(currentDate);
             const option = document.createElement('option');
             option.value = isoDate;
@@ -148,27 +139,17 @@ export function openModal(taskId = null) {
 
 /**
  * Schließt das Task-Modal.
- *
- * Versteckt das Element mit id "task-modal" und entfernt den CSS-Zustand `modal-open` vom Body.
  */
 export function closeModal() {
-    document.getElementById('task-modal').classList.add('hidden');
+    const modal = document.getElementById('task-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
     document.body.classList.remove('modal-open');
 }
 
 /**
- * Öffnet ein numerisches Prompt-Modal, initialisiert Eingabefeld und registriert einen Rückruf.
- *
- * Zeigt das Prompt-Modal mit Titel und Beschriftung an, setzt das Eingabefeld auf initialValue,
- * begrenzt den minimalen Wert auf 0 und wählt die Schrittweite automatisch (0.5, wenn die Beschriftung
- * das Wort "stunden" enthält, sonst 1). Der übergebene callback wird im globalen Zustand als
- * `promptCallback` gespeichert und später beim Absenden des Prompts verwendet. Fügt außerdem die
- * Klasse `modal-open` zum Body hinzu.
- *
- * @param {string} title - Titel des Modals, wird in der Kopfzeile angezeigt.
- * @param {string} label - Beschriftung des Eingabefelds; beeinflusst die Schrittweite bei "Stunden".
- * @param {number|string} initialValue - Vorbefüllter Wert des Eingabefelds.
- * @param {Function} callback - Funktion, die mit dem eingegebenen Wert aufgerufen wird (wird in den zustand gespeichert).
+ * Öffnet ein numerisches Prompt-Modal.
  */
 export function openPromptModal(title, label, initialValue, callback) {
     updateState({ promptCallback: callback });
@@ -184,14 +165,13 @@ export function openPromptModal(title, label, initialValue, callback) {
 
 /**
  * Schließt das Prompt-Modal.
- *
- * Versteckt das Modal mit der ID "prompt-modal". Entfernt die Klasse `modal-open` vom Body
- * nur dann, wenn das Task-Modal (ID "task-modal") nicht sichtbar ist, sodass die globale
- * Modus-Flag nur verschwindet, wenn keine anderen Modale geöffnet sind.
  */
 export function closePromptModal() {
-    document.getElementById('prompt-modal').classList.add('hidden');
-    if (!document.getElementById('task-modal').classList.contains('hidden')) {
+    const modal = document.getElementById('prompt-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    if (!document.getElementById('task-modal')?.classList.contains('hidden')) {
         // do nothing, task modal is open
     } else {
         document.body.classList.remove('modal-open');
@@ -199,21 +179,21 @@ export function closePromptModal() {
 }
 
 /**
- * Initialisiert die visuelle Darstellung und das Verhalten der Kategorie-Radios im Formular.
- *
- * Registriert Change-Listener für alle Eingaben mit name="kategorie", aktualisiert unmittelbar
- * die Styling-Klassen der zugehörigen Labels und blendet das Element mit id "pc-duration-container"
- * ein bzw. aus, je nachdem ob die Kategorie "pc" gewählt ist. Ruft die Aktualisierung einmal beim
- * Aufruf auf, um den anfänglichen Zustand korrekt darzustellen.
+ * Initialisiert das Styling der Kategorie-Radios.
  */
 export function setupRadioStyling() {
     const radios = document.querySelectorAll('input[name="kategorie"]');
     const durationContainer = document.getElementById('pc-duration-container');
+    const container = document.getElementById('kategorie-selector');
+
     const update = () => {
         const selected = document.querySelector('input[name="kategorie"]:checked')?.value;
-        durationContainer.classList.toggle('hidden', selected !== 'pc');
+        if (durationContainer) {
+            durationContainer.classList.toggle('hidden', selected !== 'pc');
+        }
         radios.forEach(r => {
             const d = r.nextElementSibling;
+            if (!d) return;
             const isActive = r.checked;
             d.classList.toggle('active', isActive);
             d.classList.toggle('bg-indigo-600', isActive);
@@ -223,6 +203,14 @@ export function setupRadioStyling() {
             d.classList.toggle('border-border-color', !isActive);
         });
     };
+
+    if (container && container.dataset.stylingInit === '1') {
+        update();
+        return;
+    }
+    if (container) {
+        container.dataset.stylingInit = '1';
+    }
     radios.forEach(radio => radio.addEventListener('change', update));
     update();
 }

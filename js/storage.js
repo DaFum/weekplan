@@ -26,6 +26,8 @@ export const storage = {
  *
  * @param {Object} state - Der Anwendungszustand; erwartet mindestens die Felder `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme` und `coins`.
  */
+const STORAGE_KEY = 'wochenplanerData';
+
 export function saveData(state) {
     const dataToSave = {
         tasks: state.tasks,
@@ -35,7 +37,7 @@ export function saveData(state) {
         coins: state.coins
     };
     try {
-        storage.setItem('wochenplanerData', JSON.stringify(dataToSave));
+        storage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     } catch (e) {
         console.error("Fehler beim Speichern der Daten:", e);
     }
@@ -53,15 +55,18 @@ export function saveData(state) {
  * @returns {Object} Das geladene Datenobjekt oder ein leeres Objekt bei Fehler/nicht vorhandenem Eintrag.
  */
 export function loadData() {
-    let data = {};
     try {
-        const savedData = storage.getItem('wochenplanerData');
+        const savedData = storage.getItem(STORAGE_KEY);
         if (savedData) {
-            data = JSON.parse(savedData);
+            const parsedData = JSON.parse(savedData);
+            // Ensure the parsed data is a non-null object
+            if (parsedData && typeof parsedData === 'object') {
+                return parsedData;
+            }
         }
     } catch (e) {
         console.error("Fehler beim Laden der Daten:", e);
-        data = {}; // Reset to empty object on error
     }
-    return data;
+    // Return an empty object if data is missing, malformed, or not an object
+    return {};
 }

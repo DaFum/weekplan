@@ -1,15 +1,11 @@
 import { getState, updateState } from './state.js';
 import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes } from './utils.js';
 import { kategorieDetails } from './config.js';
-import { openModal } from './events.js';
-import { toggleTask, deleteTask } from './tasks.js';
+import { deleteTask } from './tasks.js';
 import { updateMetaBar } from './theme.js';
 
 /**
  * Rendert die gesamte Benutzeroberfläche neu.
- *
- * Führt nacheinander die Teil-Renderer für Zeit-Tracker, Wochenziel, Streak und Plan aus
- * und aktualisiert anschliessend die Anzeige der Coins sowie die Meta-Leiste.
  */
 export function renderAllUI() {
     renderTimeTracker();
@@ -21,23 +17,21 @@ export function renderAllUI() {
 }
 
 /**
- * Rendert die PC-Zeit-Übersicht für die aktuelle Woche in das Element mit der ID "pc-time-tracker".
- *
- * Liest den aktuellen State (Tasks und pcStundenGesamt), summiert die als erledigt markierten PC-Aufgaben
- * innerhalb der laufenden Woche (nach Datum) und berechnet daraus verbrauchte Minuten, verbleibende Minuten
- * sowie den Fortschritt (0–100%). Überschreibt das HTML des Containers und zeigt einen Kreis-Progress,
- * verbleibende Zeit und einen Einstellungsbutton an.
- *
- * Nebenwirkung: Überschreibt innerHTML des DOM-Elements mit id "pc-time-tracker".
+ * Rendert die PC-Zeit-Übersicht für die aktuelle Woche.
  */
 export function renderTimeTracker() {
     const { tasks, pcStundenGesamt } = getState();
     const container = document.getElementById('pc-time-tracker');
+    if (!container) return;
+
     const startOfWeek = getStartOfWeek(new Date());
-    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
+
     const usedMinutes = tasks
         .filter(t => t && t.kategorie === 'pc' && t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek))
         .reduce((sum, t) => sum + (t.durationInMinutes || 0), 0);
+
     const totalMinutes = pcStundenGesamt * 60;
     const remainingMinutes = totalMinutes - usedMinutes;
     const progress = totalMinutes > 0 ? Math.min((usedMinutes / totalMinutes), 1) : 0;
@@ -69,22 +63,16 @@ export function renderTimeTracker() {
 }
 
 /**
- * Rendert den Wochenziel-Tracker und aktualisiert das DOM-Element mit id "weekly-goal-tracker".
- *
- * Berechnet die Anzahl abgeschlossener Aufgaben in der aktuellen Woche (Felder: `erledigt` und `date` im ISO-Format),
- * ermittelt den Fortschritt relativ zum in `getState().wochenZiel` gesetzten Ziel (auf 100% begrenzt)
- * und schreibt eine zusammenfassende Anzeige inklusive Fortschrittsbalken in das Ziel-Element.
- *
- * Verhalten:
- * - Zählt nur Tasks, deren `erledigt`-Flag true ist und deren `date` zwischen Start und Ende der aktuellen Woche liegt.
- * - Wenn `wochenZiel` <= 0 wird der Fortschritt als 0% behandelt.
- * - Aktualisiert direkt innerHTML des Elements `#weekly-goal-tracker`.
+ * Rendert den Wochenziel-Tracker.
  */
 export function renderWeeklyGoalTracker() {
     const { tasks, wochenZiel } = getState();
     const container = document.getElementById('weekly-goal-tracker');
+    if (!container) return;
+
     const startOfWeek = getStartOfWeek(new Date());
-    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
     const tasksDone = tasks.filter(t => t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek)).length;
     const progress = wochenZiel > 0 ? Math.min((tasksDone / wochenZiel) * 100, 100) : 0;
 
@@ -105,15 +93,11 @@ export function renderWeeklyGoalTracker() {
 }
 
 /**
- * Rendert den Streak-Tracker im DOM.
- *
- * Liest die aktuelle Streak-Länge über getCurrentStreak() und aktualisiert das Element mit der ID
- * "streak-tracker", um die Anzahl der aufeinanderfolgenden Tage visuell darzustellen.
- *
- * Hinweis: Erwartet, dass ein Element mit der ID "streak-tracker" im Dokument vorhanden ist.
+ * Rendert den Streak-Tracker.
  */
 export function renderStreakTracker() {
     const container = document.getElementById('streak-tracker');
+    if (!container) return;
     const streak = getCurrentStreak();
     container.innerHTML = `
         <h2 class="text-lg font-bold mb-2">🔥 Streak</h2>
@@ -122,60 +106,51 @@ export function renderStreakTracker() {
 }
 
 /**
- * Rendert die vier Wochen-Planansichten, die Tageskarten und die Wochen-Navigation in das DOM.
- *
- * Baut dynamisch eine 4-Wochen-Ansicht (jeweils 7 Tage) und fügt für jeden Tag eine Tageskarte
- * mit Datum, Tages-Punktezähler und einem Container für Aufgaben (`aufgaben-liste-YYYY-MM-DD`) hinzu.
- * Erzeugt außerdem passende Navigationsbuttons ("Woche 1" … "Woche 4") und hängt diese in
- * die Elemente mit den IDs `wochen-container` bzw. `wochen-nav`.
- *
- * Nebenwirkungen:
- * - Aktualisiert das DOM (Elemente innerhalb von `wochen-container` und `wochen-nav`).
- * - Setzt `aktiveWoche` im Zustand, falls das aktuelle Datum innerhalb einer der erzeugten Wochen liegt.
- * - Ruft `renderAllTasks()` auf, um Aufgaben in die jeweiligen Tages-Container zu rendern.
- * - Ruft `showWoche(aktiveWoche)` auf, um die aktuell aktive Woche sichtbar zu machen.
+ * Rendert den Wochenplan und die Navigation.
  */
 export function renderPlan() {
     const { aktiveWoche } = getState();
     const wochenContainer = document.getElementById('wochen-container');
     const wochenNav = document.getElementById('wochen-nav');
-    wochenContainer.innerHTML = ''; wochenNav.innerHTML = '';
+    if (!wochenContainer || !wochenNav) return;
+
+    wochenContainer.innerHTML = '';
+    wochenNav.innerHTML = '';
     const startOfCurrentWeek = getStartOfWeek(new Date());
     const todayISO = getISODate(new Date());
 
     for (let week = 0; week < 4; week++) {
-        const weekStart = new Date(startOfCurrentWeek); weekStart.setDate(weekStart.getDate() + week * 7);
+        const weekStart = new Date(startOfCurrentWeek);
+        weekStart.setDate(weekStart.getDate() + week * 7);
         const navBtn = document.createElement('button');
         navBtn.innerHTML = `Woche ${week + 1}`;
-        navBtn.className = `nav-button`;
+        navBtn.className = 'nav-button';
         navBtn.dataset.weekIndex = week;
         wochenNav.appendChild(navBtn);
 
         const wochenAnsicht = document.createElement('div');
         wochenAnsicht.id = `woche-${week}`;
-        wochenAnsicht.className = 'wochen-ansicht hidden';
+        wochenAnsicht.className = 'wochen-ansicht'; // Is visible by default now
 
         const tagesContainer = document.createElement('div');
         tagesContainer.className = 'tag-container flex overflow-x-auto pb-4 space-x-4 px-1';
 
         for (let day = 0; day < 7; day++) {
-            const currentDate = new Date(weekStart); currentDate.setDate(currentDate.getDate() + day);
+            const currentDate = new Date(weekStart);
+            currentDate.setDate(currentDate.getDate() + day);
             const isoDate = getISODate(currentDate);
             const isToday = isoDate === todayISO;
-            if(isToday) updateState({ aktiveWoche: week });
 
             const tagesKarte = document.createElement('div');
             tagesKarte.id = isoDate;
             tagesKarte.className = `tag-karte p-5 rounded-2xl shadow-lg ${isToday ? 'today-card' : ''}`;
-
-            const punkte = getPunkteFuerTag(isoDate);
             tagesKarte.innerHTML = `
                 <div class="day-header">
                     <div>
                         <h3 class="day-title">${formatDisplayDate(currentDate).split(',')[0]}</h3>
                         <div class="day-date">${formatDisplayDate(currentDate).split(',')[1]}</div>
                     </div>
-                    <div class="day-score"><span class="text-yellow-500">⭐</span> ${punkte}</div>
+                    <div class="day-score"><span class="text-yellow-500">⭐</span> ${getPunkteFuerTag(isoDate)}</div>
                 </div>
                 <div id="aufgaben-liste-${isoDate}" class="tasks-container space-y-3"></div>`;
             tagesContainer.appendChild(tagesKarte);
@@ -183,22 +158,18 @@ export function renderPlan() {
         wochenAnsicht.appendChild(tagesContainer);
         wochenContainer.appendChild(wochenAnsicht);
     }
+
     renderAllTasks();
     showWoche(aktiveWoche);
 }
 
 /**
- * Wechselt die angezeigte Wochenansicht und setzt die aktive Woche im Anwendungszustand.
- *
- * Versteckt alle Wochenansichten, zeigt die Woche mit der ID `woche-<index>` an und aktualisiert
- * die Stil-Klassen der Navigations-Buttons, sodass der Button zur aktiven Woche hervorgehoben wird.
- *
- * @param {number} index - Index der anzuzeigenden Woche (verwendet für `woche-<index>` und die Datenattribute der Nav-Buttons).
+ * Zeigt die korrekte Woche an.
  */
 export function showWoche(index) {
-    updateState({ aktiveWoche: index });
-    document.querySelectorAll('.wochen-ansicht').forEach(el => el.classList.add('hidden'));
-    document.getElementById(`woche-${index}`).classList.remove('hidden');
+    document.querySelectorAll('.wochen-ansicht').forEach((el, i) => {
+        el.classList.toggle('hidden', i !== index);
+    });
     document.querySelectorAll('.nav-button').forEach(btn => {
         const isActive = parseInt(btn.dataset.weekIndex) === index;
         btn.classList.toggle('bg-indigo-600', isActive);
@@ -209,23 +180,7 @@ export function showWoche(index) {
 }
 
 /**
- * Rendert alle Aufgabenlisten im DOM und initialisiert Drag-&-Drop für deren Neuanordnung.
- *
- * Liest die Aufgaben aus dem globalen State, füllt für jedes Element mit einer ID im Format
- * `aufgaben-liste-<ISO-Datum>` die entsprechenden Task-Elemente (oder einen Empty-State),
- * initialisiert einmalig Sortable für Drag-&-Drop und schreibt nach einer Umordnung die
- * neue Reihenfolge zurück in den State.
- *
- * Seiteneffekte:
- * - Manipuliert direkt das DOM (befüllt Listen, fügt Platzhalter ein).
- * - Initialisiert Sortable auf Listenelementen und setzt `data-sortable-init="1"` zur Vermeidung
- *   mehrfacher Initialisierungen.
- * - Aktualisiert den globalen State (`updateState`) mit der neuen Aufgabenreihenfolge.
- * - Ruft `updatePunkteAnzeige()` auf, um die Tagespunktanzeige zu aktualisieren.
- *
- * Voraussetzungen:
- * - Aufgaben im State müssen ein `date`-Feld im ISO-Datum-Format enthalten.
- * - Listen-Elemente müssen IDs im Format `aufgaben-liste-<ISO-Datum>` haben.
+ * Rendert alle Aufgabenlisten im DOM und initialisiert Drag & Drop.
  */
 export function renderAllTasks() {
     const { tasks } = getState();
@@ -253,19 +208,16 @@ export function renderAllTasks() {
             animation: 150,
             ghostClass: 'opacity-50',
             onEnd: (evt) => {
+                const { tasks } = getState();
                 const newIndex = evt.newIndex;
                 const oldIndex = evt.oldIndex;
-
                 const isoDate = list.id.replace('aufgaben-liste-', '');
-
                 const tasksForDay = tasks.filter(t => t && t.date === isoDate);
                 const otherTasks = tasks.filter(t => t && t.date !== isoDate);
-
                 const taskToMove = tasksForDay.splice(oldIndex, 1)[0];
                 if (taskToMove) {
                     tasksForDay.splice(newIndex, 0, taskToMove);
                 }
-
                 updateState({ tasks: [...otherTasks, ...tasksForDay] });
             }
         });
@@ -276,83 +228,43 @@ export function renderAllTasks() {
 }
 
 /**
- * Erzeugt und gibt ein DOM-Element für eine Aufgabenkarte zurück.
- *
- * Das Element enthält Icon, Namen, optional die Dauer (für Kategorie 'pc'), ein Farb-Badge,
- * sowie Aktionsbuttons zum Bearbeiten, Als-erledigt-markieren (zeigt ein Häkchen, wenn erledigt)
- * und Löschen. Die Karte bekommt die CSS-Klasse `task-card`, ein data-Attribut `data-task-id`
- * und Klassen/Attribute entsprechend dem Erledigt-Status.
- *
- * @param {Object} task - Aufgabenobjekt mit den nötigen Feldern.
- * @param {string|number} task.id - Eindeutige ID der Aufgabe (wird in data-task-id gesetzt).
- * @param {string} task.name - Anzeigename der Aufgabe.
- * @param {'pc'|'schule'|'freizeit'} task.kategorie - Kategorie, beeinflusst Icon, Badge-Text und Daueranzeige.
- * @param {boolean} task.erledigt - Gibt an, ob die Aufgabe bereits erledigt ist; beeinflusst Styling und Done-Button.
- * @param {number} [task.durationInMinutes] - Optional: Dauer in Minuten (nur sichtbar für Kategorie 'pc').
- * @return {HTMLElement} Die zusammengesetzte DOM-Elementstruktur der Aufgabenkarte.
+ * Erzeugt ein DOM-Element für eine Aufgabenkarte.
  */
 function createTaskElement(task) {
     const details = kategorieDetails[task.kategorie];
+    if (!details) {
+        console.warn(`Unbekannte Kategorie: ${task.kategorie}`);
+        return document.createDocumentFragment(); // Return an empty element
+    }
     const element = document.createElement('div');
     element.className = `task-card ${task.erledigt ? 'completed' : ''}`;
     element.dataset.taskId = task.id;
-    const durationText = task.kategorie === 'pc' && task.durationInMinutes ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>` : '';
 
-    const row = document.createElement('div');
-    row.className = 'flex items-start';
-    const iconDiv = document.createElement('div');
-    iconDiv.className = 'mr-3 text-xl';
-    iconDiv.textContent = details.icon;
-    const grow = document.createElement('div');
-    grow.className = 'flex-grow';
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'task-name';
-    nameDiv.textContent = task.name;
-    grow.appendChild(nameDiv);
-    if (task.kategorie === 'pc' && task.durationInMinutes) {
-        const d = document.createElement('span');
-        d.className = 'task-duration';
-        d.textContent = `(${task.durationInMinutes} Min)`;
-        grow.appendChild(d);
-    }
-    const badge = document.createElement('div');
-    badge.className = `task-category-badge ${details.color}`;
-    badge.textContent = task.kategorie === 'schule' ? 'Schule' : (task.kategorie === 'pc' ? 'PC-Zeit' : 'Freizeit');
-    grow.appendChild(badge);
-    row.appendChild(iconDiv);
-    row.appendChild(grow);
-    element.appendChild(row);
-
-    const actions = document.createElement('div');
-    actions.className = 'task-actions mt-3 flex justify-end';
-
-    const editBtn = document.createElement('button');
-    editBtn.className = 'task-card-button text-secondary hover:bg-border-color relative overflow-hidden';
-    editBtn.setAttribute('aria-label', 'Bearbeiten');
-    editBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>';
-
-    const doneBtn = document.createElement('button');
-    doneBtn.className = `task-card-button ${task.erledigt ? 'bg-green-500' : 'border-2 border-current'} text-white font-bold text-lg relative overflow-hidden`;
-    doneBtn.setAttribute('aria-label', task.erledigt ? 'Erledigt' : 'Als erledigt markieren');
-    if (task.erledigt) doneBtn.textContent = '✓';
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden';
-    delBtn.setAttribute('aria-label', 'Löschen');
-    delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>';
-
-    actions.appendChild(editBtn);
-    actions.appendChild(doneBtn);
-    actions.appendChild(delBtn);
-    element.appendChild(actions);
+    element.innerHTML = `
+        <div class="flex items-start">
+            <div class="mr-3 text-xl">${details.icon}</div>
+            <div class="flex-grow">
+                <div class="task-name">${task.name}</div>
+                ${task.kategorie === 'pc' && task.durationInMinutes ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>` : ''}
+                <div class="task-category-badge ${details.color}">${task.kategorie.charAt(0).toUpperCase() + task.kategorie.slice(1)}</div>
+            </div>
+        </div>
+        <div class="task-actions mt-3 flex justify-end">
+            <button class="task-card-button text-secondary hover:bg-border-color relative overflow-hidden" aria-label="Bearbeiten" data-action="edit">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+            </button>
+            <button class="task-card-button ${task.erledigt ? 'bg-green-500' : 'border-2 border-current'} text-white font-bold text-lg relative overflow-hidden" aria-label="${task.erledigt ? 'Erledigt' : 'Als erledigt markieren'}" data-action="toggle">
+                ${task.erledigt ? '✓' : ''}
+            </button>
+            <button class="task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden" aria-label="Löschen" data-action="delete">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+            </button>
+        </div>`;
     return element;
 }
 
 /**
  * Gibt die Anzahl der an einem bestimmten Tag erledigten Aufgaben zurück.
- *
- * @param {string} isoDate - Datum im ISO-Format (YYYY-MM-DD), für das die erledigten Aufgaben gezählt werden.
- * @return {number} Anzahl der erledigten Aufgaben an diesem Datum.
  */
 export function getPunkteFuerTag(isoDate) {
     const { tasks } = getState();
@@ -361,12 +273,6 @@ export function getPunkteFuerTag(isoDate) {
 
 /**
  * Aktualisiert die Punktezahlen in allen Tageskarten.
- *
- * Geht alle Elemente mit der Klasse `tag-karte` durch und setzt den Inhalt des jeweiligen
- * `.day-score`-Elements auf ein Stern-Icon gefolgt von der Punktzahl, wie sie
- * von `getPunkteFuerTag(card.id)` zurückgegeben wird.
- *
- * Hinweis: Führt direkte DOM-Manipulationen aus; gibt keinen Wert zurück.
  */
 export function updatePunkteAnzeige() {
     document.querySelectorAll('.tag-karte').forEach(card => {
@@ -376,37 +282,25 @@ export function updatePunkteAnzeige() {
 }
 
 /**
- * Scrollt die horizontale Tagesliste so, dass das Element mit der Klasse `today-card` sichtbar wird.
- *
- * Sucht das erste Element mit `.today-card`. Falls dessen direkter Elterncontainer die Klasse `flex` besitzt,
- * wird horizontal zu dieser Karte gescrollt (mit leichtem 5%-Offset zur Breite des Containers) und die Bewegung
- * erfolgt smooth. Hat kein `today-card`-Element gefunden oder ist der Elterncontainer nicht horizontal (`flex`),
- * passiert nichts.
+ * Scrollt die horizontale Tagesliste so, dass der heutige Tag sichtbar wird.
  */
 export function scrollToCurrentDay() {
     const todayEl = document.querySelector('.today-card');
     if (todayEl) {
         const container = todayEl.parentElement;
-        if(container.classList.contains('flex')){
+        if(container && container.classList.contains('flex')){
             container.scrollTo({ left: todayEl.offsetLeft - container.getBoundingClientRect().width * 0.05, behavior: 'smooth' });
         }
     }
 }
 
 /**
- * Erzeugt und platziert einen visuellen "Ripple"-Effekt in einem Button an der Klickposition.
- *
- * Fügt ein kreisförmiges <span>-Element mit der Klasse `ripple` in das übergebene Button-Element ein,
- * positioniert es basierend auf den Client-Koordinaten des Events und entfernt zuvor vorhandene Ripples.
- *
- * @param {HTMLElement} button - Das DOM-Element (z. B. ein Button), in dem der Ripple eingefügt wird.
- * @param {MouseEvent} event - Das Mausklick-Event; dessen clientX/clientY bestimmen die Position des Effekts.
+ * Erzeugt einen Ripple-Effekt in einem Button.
  */
 export function createRipple(button, event) {
     const circle = document.createElement("span");
     const diameter = Math.max(button.clientWidth, button.clientHeight);
     const radius = diameter / 2;
-
     circle.style.width = circle.style.height = `${diameter}px`;
     circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
     circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
@@ -416,21 +310,19 @@ export function createRipple(button, event) {
     if (ripple) {
         ripple.remove();
     }
-
     button.appendChild(circle);
 }
 
 /**
- * Startet eine kurze Konfetti-Animation mit Sound.
- *
- * Fügt bis zu 50 farbige Konfetti-Elemente in das DOM-Element mit der ID "konfetti-container" ein,
- * spielt einen kurzen Konfetti-Sound und entfernt die Konfetti-Elemente nach etwa 3 Sekunden.
- *
- * Hinweis: Das Element mit der ID "konfetti-container" muss im DOM vorhanden sein.
+ * Startet eine Konfetti-Animation.
  */
 export function starteKonfetti() {
-    sounds.confetti.triggerAttackRelease("G4", "0.4");
+    const { sounds } = getState();
+    if (sounds && sounds.confetti) {
+        sounds.confetti.triggerAttackRelease("G4", "0.4");
+    }
     const container = document.getElementById('konfetti-container');
+    if (!container) return;
     for (let i = 0; i < 50; i++) {
         const konfetti = document.createElement('div');
         konfetti.className = 'konfetti-stueck';
@@ -444,52 +336,60 @@ export function starteKonfetti() {
 }
 
 /**
- * Aktualisiert die im UI angezeigte Münzanzahl.
- *
- * Liest die aktuelle `coins`-Zahl aus dem Anwendungszustand und setzt den Textinhalt
- * des DOM-Elements mit der ID `coins-count` auf diesen Wert.
+ * Aktualisiert die Münzanzeige.
  */
 export function updateCoinsDisplay() {
     const { coins } = getState();
-    document.getElementById('coins-count').textContent = coins;
+    const el = document.getElementById('coins-count');
+    if (el) {
+        el.textContent = coins;
+    }
 }
 
-export const updateMotivationsspruch = () => document.getElementById('motivations-spruch').textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
+/**
+ * Aktualisiert den Motivationsspruch.
+ */
+export const updateMotivationsspruch = () => {
+    const el = document.getElementById('motivations-spruch');
+    if (el) {
+        el.textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
+    }
+};
 
 /**
- * Berechnet die aktuelle Tagesserie (Streak) abgeschlossener Aufgaben.
- *
- * Zählt, wie viele aufeinanderfolgende Tage (beginnend bei heute) mindestens eine
- * erledigte Aufgabe haben. Mehrere erledigte Aufgaben am selben Tag werden als
- * ein Tag gezählt. Die Funktion ignoriert Uhrzeiten (vergleicht nur Datumsteile)
- * und stoppt beim ersten Tag ohne erledigte Aufgabe.
- *
- * @return {number} Anzahl aufeinanderfolgender Tage mit mindestens einer erledigten Aufgabe (Streak).
+ * Berechnet die aktuelle Tagesserie.
  */
 export function getCurrentStreak() {
     const { tasks } = getState();
-    const sorted = [...tasks].filter(t => t.erledigt).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const erledigteTasks = tasks.filter(t => t.erledigt && t.date);
+    if (erledigteTasks.length === 0) return 0;
+
+    const erledigteDaten = [...new Set(erledigteTasks.map(t => t.date))].sort().reverse();
+
     let streak = 0;
-    let cursor = new Date();
-    cursor.setHours(0, 0, 0, 0);
+    let heute = new Date();
+    heute.setHours(12, 0, 0, 0);
 
-    for (const task of sorted) {
-        const taskDate = new Date(task.date);
-        taskDate.setHours(0, 0, 0, 0);
+    for (let i = 0; i < erledigteDaten.length; i++) {
+        const datum = new Date(erledigteDaten[i]);
+        datum.setHours(12, 0, 0, 0);
 
-        if (taskDate.getTime() === cursor.getTime()) {
+        const erwartetesDatum = new Date(heute);
+        erwartetesDatum.setDate(heute.getDate() - streak);
+
+        if (datum.getTime() === erwartetesDatum.getTime()) {
             streak++;
-            cursor.setDate(cursor.getDate() - 1);
-        } else if (taskDate.getTime() < cursor.getTime()) {
-            // Check if it's the previous day
-            const prevDay = new Date(cursor);
-            prevDay.setDate(prevDay.getDate() - 1);
-            if (taskDate.getTime() === prevDay.getTime()) {
-                streak++;
-                cursor = prevDay;
-            } else {
-                break;
+        } else {
+            // Check if the streak starts today
+            const heuteDatum = new Date(heute);
+            const ersterTag = new Date(erledigteDaten[0]);
+            heuteDatum.setHours(12, 0, 0, 0);
+            ersterTag.setHours(12, 0, 0, 0);
+            if (ersterTag.getTime() !== heuteDatum.getTime()) {
+                // if the most recent day is not today, the streak is 0
+                return 0;
             }
+            break;
         }
     }
     return streak;

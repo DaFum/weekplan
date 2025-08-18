@@ -45,6 +45,7 @@
             transition: background-color 0.3s, color 0.3s;
             font-size: 16px;
             line-height: 1.6;
+            color-scheme: light dark;
         }
 
         .modal-open {
@@ -377,37 +378,6 @@
         }
 
 
-        .button-group {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background-color: var(--text-accent);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #0369a1;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background-color: var(--bg-accent);
-            color: var(--text-secondary);
-        }
-
-        .btn-secondary:hover {
-            background-color: var(--border-color);
-        }
 
         .task-category-badge {
             font-size: 0.75rem;
@@ -702,3 +672,11 @@
         .btn-secondary:hover {
             background-color: var(--border-color);
         }
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

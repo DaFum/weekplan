@@ -20,7 +20,8 @@ import { formatDisplayDate } from './utils.js';
 export function saveTask(event) {
     event.preventDefault();
     const taskId = document.getElementById('task-id').value;
-    const kategorie = document.querySelector('input[name="kategorie"]:checked').value;
+    const kategorieInput = document.querySelector('input[name="kategorie"]:checked');
+    const kategorie = kategorieInput ? kategorieInput.value : 'schule';
     const taskData = {
         name: document.getElementById('task-name').value,
         kategorie: kategorie,
@@ -39,7 +40,7 @@ export function saveTask(event) {
     } else {
         updateState({ tasks: [...tasks, { ...taskData, id: 'task-' + Date.now(), erledigt: false }] });
 
-        if (Notification.permission === 'granted') {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             new Notification(`Neue Aufgabe: ${taskData.name}`, {
                 body: `Am ${formatDisplayDate(new Date(taskData.date))}`,
                 icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png'

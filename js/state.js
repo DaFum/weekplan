@@ -58,7 +58,8 @@ export function subscribe(listener) {
  * Aufruf erfolgt synchron; Exceptions, die von einem Listener geworfen werden, werden nicht abgefangen und propagieren weiter.
  */
 function notifyListeners() {
-    for (const listener of listeners) {
-        listener(getState());
+    const snapshot = getState();
+    for (const listener of [...listeners]) {
+        listener(snapshot);
     }
 }
