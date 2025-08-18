@@ -12,7 +12,7 @@ import { updateState } from './state.js';
  */
 export function initSounds() {
     // Fail-safe: Tone.js vorhanden?
-    if (typeof window.Tone === 'undefined') {
+    if (typeof window === 'undefined' || typeof window.Tone === 'undefined') {
         console.warn('[audio] Tone.js nicht geladen – Sounds werden deaktiviert.');
         updateState({ sounds: {} });
         return;
