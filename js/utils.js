@@ -65,4 +65,3 @@ export function createRipple(button, event) {
         ripple.remove();
     }
     button.appendChild(circle);
-}
