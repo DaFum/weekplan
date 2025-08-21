@@ -1,6 +1,6 @@
 import { getState, updateState } from "./state.js";
 import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes } from "./utils.js";
-import { kategorieDetails, motivationsSprueche } from "./config.js";
+import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
 import { updateMetaBar } from "./theme.js";
 
 let lastRenderedTasks = [];

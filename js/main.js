@@ -2,6 +2,7 @@ import { initEventListeners } from "./events.js";
 import { loadData, saveData } from "./storage.js";
 import { cleanupOldTasks } from "./tasks.js";
 import { renderAllUI, updateMotivationsspruch, scrollToCurrentDay, updateTasksUI, updateTimeTracker, updateWeeklyGoalTracker, updateCoinsDisplay } from "./ui.js";
+import { debounce } from "./utils.js";
 import { initGames } from "./games.js";
 import { updateTheme, updateMetaBar } from "./theme.js";
 import { updateState, subscribe } from "./state.js";
@@ -29,16 +30,13 @@ document.addEventListener("DOMContentLoaded", () => {
     initGames();
 
     // Subscribe to state changes for persistence and specific UI updates
+    const debouncedSaveData = debounce(saveData, 300);
+
     subscribe("theme", state => {
         updateTheme(state.theme);
         saveData(state);
     });
 
-    subscribe("tasks", state => {
-        updateTasksUI(state);
-        updateMetaBar(state);
-    // Debounce saveData for frequent task updates
-    const debouncedSaveData = debounce(saveData, 300);
     subscribe("tasks", state => {
         updateTasksUI(state);
         updateMetaBar(state);

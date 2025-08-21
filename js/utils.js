@@ -46,8 +46,16 @@ export function shuffleArray(array) {
  * @returns {string} Der HTML-escaped String.
  */
 export function escapeHTML(str) {
-    return String(str).replace(/[&<>"]/g, (ch) => (
     return String(str).replace(/[&<>"']/g, (ch) => (
         { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
     ));
+}
+
+export function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
 }
