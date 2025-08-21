@@ -53,20 +53,25 @@ export function initEventListeners() {
         if (btn) createRipple(btn, event);
     });
 
-    document.getElementById("task-form").addEventListener("submit", (event) => {
-        saveTask(event);
-        // closeModal() is already called inside saveTask()
-    });
+    const taskForm = document.getElementById("task-form");
+    if (taskForm) {
+        taskForm.addEventListener("submit", (event) => {
+            saveTask(event);
+        });
+    }
 
-    document.getElementById("prompt-form").addEventListener("submit", (event) => {
-        event.preventDefault();
-        const { promptCallback } = getState();
-        const value = document.getElementById("prompt-modal-input").value;
-        if (promptCallback && value !== null && !isNaN(value) && value >= 0) {
-            promptCallback(value);
-        }
-        closePromptModal();
-    });
+    const promptForm = document.getElementById("prompt-form");
+    if (promptForm) {
+        promptForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const { promptCallback } = getState();
+            const value = document.getElementById("prompt-modal-input").value;
+            if (promptCallback && value !== null && !isNaN(value) && value >= 0) {
+                promptCallback(value);
+            }
+            closePromptModal();
+        });
+    }
 }
 
 /**

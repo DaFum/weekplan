@@ -2,11 +2,11 @@ import { initEventListeners } from "./events.js";
 import { loadData, saveData } from "./storage.js";
 import { cleanupOldTasks } from "./tasks.js";
 import { renderAllUI, updateMotivationsspruch, scrollToCurrentDay, updateTasksUI, updateTimeTracker, updateWeeklyGoalTracker, updateCoinsDisplay } from "./ui.js";
-import { debounce } from "./utils.js";
 import { initGames } from "./games.js";
 import { updateTheme, updateMetaBar } from "./theme.js";
 import { updateState, subscribe } from "./state.js";
 import { initSounds } from "./audio.js";
+import { debounce } from "./utils.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const savedData = loadData();
@@ -17,6 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
         theme,
         aktiveWoche: 0
     });
+
+    updateTheme(theme); // Apply theme immediately
 
     initEventListeners();
     initSounds();

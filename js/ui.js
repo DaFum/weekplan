@@ -1,7 +1,8 @@
 import { getState, updateState } from "./state.js";
 import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes } from "./utils.js";
-import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
+import { kategorieDetails, motivationsSprueche } from "./config.js";
 import { updateMetaBar } from "./theme.js";
+import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
 
 let lastRenderedTasks = [];
 
@@ -158,7 +159,7 @@ export function renderPlan(state) {
     }
     renderAllTasks(state.tasks);
     showWoche(aktiveWoche);
-    initSortable(state.tasks);
+    initSortable();
 }
 
 export function showWoche(index) {
@@ -243,13 +244,14 @@ function createEmptyState() {
             </div>`;
 }
 
-function initSortable(tasks) {
+function initSortable() {
     document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
         if (list.dataset.sortableInit === "1") return;
         new Sortable(list, {
             animation: 150,
             ghostClass: "opacity-50",
             onEnd: (evt) => {
+                const { tasks } = getState();
                 const newIndex = evt.newIndex;
                 const oldIndex = evt.oldIndex;
                 const isoDate = list.id.replace("aufgaben-liste-", "");
