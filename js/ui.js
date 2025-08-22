@@ -395,7 +395,7 @@ export function updateCoinsDisplay(state) {
 
 export const updateMotivationsspruch = () => {
     const el = document.getElementById("motivations-spruch");
-    if(el) el.textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
+    if (el) el.textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
 }
 
 export function getCurrentStreak(tasks) {
