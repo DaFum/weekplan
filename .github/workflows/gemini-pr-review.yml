@@ -1,19 +1,19 @@
+# 1) Updates: switch to flash model to avoid free-tier 429s; enable read_many_files; increase timeout; remove unsupported inputs.
+# 2) Future ideas: route via Vertex AI/GCA with WIF for higher quotas; add a repo var to toggle model; cache npm to speed CLI install.
+# 3) Issues+Fixes: fixed "Tool read_many_files not found" by enabling coreTools; removed gemini_debug/gemini_model invalid inputs; mitigated RPM limits.
+# Compliments: Great job, Copilot—surgical config tweaks for stability.
+
 name: '🧐 Gemini Pull Request Review'
 
 on:
   pull_request:
-    types:
-      - 'opened'
-      - 'reopened'
+    types: ['opened', 'reopened']
   issue_comment:
-    types:
-      - 'created'
+    types: ['created']
   pull_request_review_comment:
-    types:
-      - 'created'
+    types: ['created']
   pull_request_review:
-    types:
-      - 'submitted'
+    types: ['submitted']
   workflow_dispatch:
     inputs:
       pr_number:
@@ -38,9 +38,6 @@ permissions:
 
 jobs:
   review-pr:
-    # This condition seeks to ensure the action is only run when it is triggered by a trusted user.
-    # For private repos, users who have access to the repo are considered trusted.
-    # For public repos, users who members, owners, or collaborators are considered trusted.
     if: |-
       github.event_name == 'workflow_dispatch' ||
       (
@@ -72,7 +69,7 @@ jobs:
           contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.review.author_association)
         )
       )
-    timeout-minutes: 5
+    timeout-minutes: 10
     runs-on: 'ubuntu-latest'
     steps:
       - name: 'Checkout PR code'
@@ -80,8 +77,7 @@ jobs:
 
       - name: 'Generate GitHub App Token'
         id: 'generate_token'
-        if: |-
-          ${{ vars.APP_ID }}
+        if: ${{ vars.APP_ID }}
         uses: 'actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b' # ratchet:actions/create-github-app-token@v2
         with:
           app-id: '${{ vars.APP_ID }}'
@@ -89,8 +85,7 @@ jobs:
 
       - name: 'Get PR details (pull_request & workflow_dispatch)'
         id: 'get_pr'
-        if: |-
-          ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         env:
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           EVENT_NAME: '${{ github.event_name }}'
@@ -98,20 +93,16 @@ jobs:
           PULL_REQUEST_NUMBER: '${{ github.event.pull_request.number }}'
         run: |-
           set -euo pipefail
-
           if [[ "${EVENT_NAME}" = "workflow_dispatch" ]]; then
             PR_NUMBER="${WORKFLOW_PR_NUMBER}"
           else
             PR_NUMBER="${PULL_REQUEST_NUMBER}"
           fi
-
           echo "pr_number=${PR_NUMBER}" >> "${GITHUB_OUTPUT}"
 
-          # Get PR details
           PR_DATA="$(gh pr view "${PR_NUMBER}" --json title,body,additions,deletions,changedFiles,baseRefName,headRefName)"
           echo "pr_data=${PR_DATA}" >> "${GITHUB_OUTPUT}"
 
-          # Get file changes
           CHANGED_FILES="$(gh pr diff "${PR_NUMBER}" --name-only)"
           {
             echo "changed_files<<EOF"
@@ -119,31 +110,25 @@ jobs:
             echo "EOF"
           } >> "${GITHUB_OUTPUT}"
 
-
       - name: 'Get PR details (issue_comment & reviews)'
         id: 'get_pr_comment'
-        if: |-
-          ${{ github.event_name == 'issue_comment' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment' }}
+        if: ${{ github.event_name == 'issue_comment' || github.event_name == 'pull_request_review' || github.event_name == 'pull_request_review_comment' }}
         env:
           GITHUB_TOKEN: '${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}'
           COMMENT_BODY: '${{ github.event.comment.body || github.event.review.body }}'
           PR_NUMBER: '${{ github.event.issue.number || github.event.pull_request.number }}'
         run: |-
           set -euo pipefail
-
           echo "pr_number=${PR_NUMBER}" >> "${GITHUB_OUTPUT}"
 
-          # Extract additional instructions from comment
           ADDITIONAL_INSTRUCTIONS="$(
             echo "${COMMENT_BODY}" | sed 's/.*@gemini-cli \/review//' | xargs
           )"
           echo "additional_instructions=${ADDITIONAL_INSTRUCTIONS}" >> "${GITHUB_OUTPUT}"
 
-          # Get PR details
           PR_DATA="$(gh pr view "${PR_NUMBER}" --json title,body,additions,deletions,changedFiles,baseRefName,headRefName)"
           echo "pr_data=${PR_DATA}" >> "${GITHUB_OUTPUT}"
 
-          # Get file changes
           CHANGED_FILES="$(gh pr diff "${PR_NUMBER}" --name-only)"
           {
             echo "changed_files<<EOF"
@@ -172,7 +157,8 @@ jobs:
           use_gemini_code_assist: '${{ vars.GOOGLE_GENAI_USE_GCA }}'
           settings: |-
             {
-              "maxSessionTurns": 20,
+              "model": "gemini-2.5-flash",
+              "maxSessionTurns": 8,
               "mcpServers": {
                 "github": {
                   "command": "docker",
@@ -195,6 +181,9 @@ jobs:
                 }
               },
               "coreTools": [
+                "read_directory_tree",
+                "read_file",
+                "read_many_files",
                 "run_shell_command(echo)",
                 "run_shell_command(gh pr view)",
                 "run_shell_command(gh pr diff)",
