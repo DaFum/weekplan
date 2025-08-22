@@ -696,7 +696,6 @@
         .btn-secondary {
             background-color: var(--bg-accent);
             color: var(--text-secondary);
-        }
 
         .btn-secondary:hover {
             background-color: var(--border-color);
