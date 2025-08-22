@@ -17,12 +17,17 @@ import { updateState } from './state.js';
 export async function initSounds() {
     try {
         const Tone = await import('https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js');
-        const sounds = {
-            complete: new Tone.default.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination(),
-            confetti: new Tone.default.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } }).toDestination(),
-            coin: new Tone.default.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination()
-        };
-        updateState({ sounds });
+        try {
+            const sounds = {
+                complete: new Tone.default.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination(),
+                confetti: new Tone.default.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } }).toDestination(),
+                coin: new Tone.default.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination()
+            };
+            updateState({ sounds });
+        } catch (synthError) {
+            console.error("Fehler beim Erstellen der Audio-Synthesizer:", synthError);
+            updateState({ sounds: {} });
+        }
     } catch (error) {
         console.error("Tone.js konnte nicht geladen werden. Audio-Funktionen sind deaktiviert.", error);
     }
