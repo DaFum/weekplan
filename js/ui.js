@@ -375,18 +375,23 @@ export function createRipple(button, event) {
         ripple.remove();
     }
 
-    button.appendChild(circle);
-}
-
-export function starteKonfetti() {
-    const { sounds } = getState();
-    sounds.confetti?.triggerAttackRelease("G4", "0.4");
-    const container = document.getElementById("konfetti-container");
-    if (!container) return;
-    for (let i = 0; i < 50; i++) {
-        const konfetti = document.createElement("div");
-        konfetti.className = "konfetti-stueck";
-        konfetti.style.left = `${Math.random() * 100}vw`;
+        if (!container) return;
+    
+        const timeouts = [];
+        for (let i = 0; i < 50; i++) {
+            const konfetti = document.createElement("div");
+            konfetti.className = "konfetti-stueck";
+            konfetti.style.left = `${Math.random() * 100}vw`;
+            konfetti.style.animationDelay = `${Math.random() * 2}s`;
+            konfetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 60%)`;
+            konfetti.style.transform = `scale(${Math.random() * 0.7 + 0.5})`;
+            container.appendChild(konfetti);
+            timeouts.push(setTimeout(() => konfetti.remove(), 3000));
+        }
+    
+        // Optional: Return function to clear timeouts if needed
+        return () => timeouts.forEach(clearTimeout);
+    }
         konfetti.style.animationDelay = `${Math.random() * 2}s`;
         konfetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 60%)`;
         konfetti.style.transform = `scale(${Math.random() * 0.7 + 0.5})`;
