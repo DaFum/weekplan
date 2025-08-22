@@ -674,7 +674,6 @@
         .button-group {
             display: flex;
             gap: 1rem;
-        }
 
         .btn {
             flex: 1;
