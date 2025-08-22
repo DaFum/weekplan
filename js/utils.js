@@ -46,8 +46,13 @@ export function shuffleArray(array) {
  * @returns {string} Der HTML-escaped String.
  */
 export function escapeHTML(str) {
-    return String(str).replace(/[&<>"]/g, (ch) => (
-    return String(str).replace(/[&<>"']/g, (ch) => (
-        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]
-    ));
+    const s = String(str);
+    const map = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    };
+    return s.replace(/[&<>"']/g, ch => map[ch]);
 }
