@@ -20,9 +20,9 @@ export const formatMinutes = (minutes) => {
 };
 
 /**
- * Mischt ein Array in-place mit dem Fisher–Yates-Algorithmus.
+ * Erstellt eine gemischte Kopie eines Arrays mit dem Fisher–Yates-Algorithmus.
  *
- * Das übergebene Array wird zufällig permutiert (Mutation des Eingabe-Arrays). Verwendet Math.random(), liefert daher nicht-deterministische Ergebnisse.
+ * Das übergebene Array bleibt unverändert; es wird eine neue, zufällig permutierte Kopie zurückgegeben. Verwendet Math.random(), liefert daher nicht-deterministische Ergebnisse.
  *
  * @param {Array<any>} array - Das zu mischende Array; Elemente beliebigen Typs.
  * @returns {Array<any>} Ein neues, gemischtes Array.
