@@ -347,7 +347,7 @@ export function scrollToCurrentDay() {
     const todayEl = document.querySelector(".today-card");
     if (todayEl) {
         const container = todayEl.parentElement;
-        if(container.classList.contains("flex")){
+        if (container.classList.contains("flex")) {
             container.scrollTo({ left: todayEl.offsetLeft - container.getBoundingClientRect().width * 0.05, behavior: "smooth" });
         }
     }
