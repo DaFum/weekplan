@@ -682,7 +682,6 @@
             border-radius: 0.5rem;
             font-weight: 700;
             transition: all 0.2s;
-        }
 
         .btn-primary {
             background-color: var(--text-accent);
