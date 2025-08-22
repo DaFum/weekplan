@@ -129,9 +129,13 @@ function renderMemoryBoard() {
         board.appendChild(card);
     });
 
-    document.getElementById("memory-score").textContent = score;
-    document.getElementById("memory-pairs").textContent = `${matchedPairs}/${cards.length / 2}`;
-    document.getElementById("memory-progress").style.width = `${(matchedPairs / (cards.length / 2)) * 100}%`;
+    const scoreEl = document.getElementById("memory-score");
+    const pairsEl = document.getElementById("memory-pairs");
+    const progressEl = document.getElementById("memory-progress");
+    
+    if (scoreEl) scoreEl.textContent = score;
+    if (pairsEl) pairsEl.textContent = `${matchedPairs}/${cards.length / 2}`;
+    if (progressEl) progressEl.style.width = `${(matchedPairs / (cards.length / 2)) * 100}%`;
 }
 
 
