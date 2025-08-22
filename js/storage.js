@@ -58,15 +58,16 @@ export function loadData() {
         const savedData = storage.getItem('wochenplanerData');
         if (savedData) {
             data = JSON.parse(savedData);
-            // Ensure required properties exist with default values
-            data.tasks = Array.isArray(data.tasks) ? data.tasks : [];
-            data.pcStundenGesamt = typeof data.pcStundenGesamt === 'number' ? data.pcStundenGesamt : 0;
-            data.wochenZiel = typeof data.wochenZiel === 'number' ? data.wochenZiel : 10;
-            data.coins = typeof data.coins === 'number' ? data.coins : 0;
         }
     } catch (e) {
         console.error("Fehler beim Laden der Daten:", e);
-        data = {}; // Reset to empty object on error
     }
+    
+    // Ensure required properties exist with default values (both for success and error cases)
+    data.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+    data.pcStundenGesamt = typeof data.pcStundenGesamt === 'number' ? data.pcStundenGesamt : 0;
+    data.wochenZiel = typeof data.wochenZiel === 'number' ? data.wochenZiel : 10;
+    data.coins = typeof data.coins === 'number' ? data.coins : 0;
+    
     return data;
 }
