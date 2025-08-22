@@ -269,7 +269,10 @@ function initSortable() {
 }
 
 function createTaskElement(task) {
-    const details = kategorieDetails[task.kategorie];
+    const details = kategorieDetails[task.kategorie] || {
+        icon: "📝",
+        color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+    };
     const element = document.createElement("div");
     element.className = `task-card ${task.erledigt ? "completed" : ""}`;
     element.dataset.taskId = task.id;
@@ -282,11 +285,15 @@ function createTaskElement(task) {
                 ${task.kategorie === "pc" && task.durationInMinutes
                     ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>`
                     : ""}
+-                <div class="task-category-badge ${details.color}">
                 <div class="task-category-badge ${details.color}">
-                    ${categoryLabels[task.kategorie] || task.kategorie}
+                    ${categoryLabels?.[task.kategorie] ?? task.kategorie}
                 </div>
             </div>
         </div>
+    `;
+    // …rest of the function…
+}
         <div class="task-actions mt-3 flex justify-end">
             <button
                 class="task-card-button text-secondary hover:bg-border-color relative overflow-hidden"
