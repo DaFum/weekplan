@@ -53,9 +53,10 @@ export function initEventListeners() {
         if (btn) createRipple(btn, event);
     });
 
-        saveTask(event);
+    const taskForm = document.getElementById("task-form");
     if (taskForm) {
         taskForm.addEventListener("submit", (event) => {
+            event.preventDefault();
             saveTask(event);
         });
     }
