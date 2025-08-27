@@ -318,7 +318,13 @@ function createEmptyState() {
     svg.setAttribute("stroke-width", "1.5");
     svg.setAttribute("stroke", "currentColor");
     svg.className = "empty-tasks-icon";
-    svg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    path.setAttribute("d", "M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z");
+    svg.appendChild(path);
+
     container.appendChild(svg);
 
     const title = document.createElement("p");
