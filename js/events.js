@@ -74,9 +74,10 @@ export function initEventListeners() {
         promptForm.addEventListener("submit", (event) => {
             event.preventDefault();
             const { promptCallback } = getState();
-            const value = document.getElementById("prompt-modal-input").value;
-            if (promptCallback && value !== null && !isNaN(value) && value >= 0) {
-                promptCallback(value);
+            const raw = document.getElementById("prompt-modal-input").value;
+            const num = raw === "" ? NaN : Number(raw);
+            if (typeof promptCallback === "function" && Number.isFinite(num) && num >= 0) {
+                promptCallback(num);
             }
             closePromptModal();
         });
