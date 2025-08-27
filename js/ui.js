@@ -451,8 +451,7 @@ export function renderTaskModal(state, taskId = null) {
             const optgroup = document.createElement("optgroup");
             optgroup.label = `Woche ${week + 1}`;
             for (let day = 0; day < 7; day++) {
-                const currentDate = new Date(startOfWeek);
-                currentDate.setDate(currentDate.getDate() + week * 7 + day);
+                const currentDate = addDays(startOfWeek, week * 7 + day);
                 const isoDate = getISODate(currentDate);
                 const option = document.createElement("option");
                 option.value = isoDate;
