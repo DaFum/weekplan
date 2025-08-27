@@ -168,7 +168,11 @@ export function setWeeklyGoal() {
         "Wie viele Aufgaben pro Woche?",
         wochenZiel,
         (value) => {
-            updateState({ wochenZiel: Number(value) });
+            const n = parseInt(value, 10);
+            if (Number.isFinite(n) && n >= 0) {
+                updateState({ wochenZiel: n });
+            }
         }
     );
+}
 }
