@@ -282,48 +282,30 @@ function createTaskElement(task) {
             <div class="mr-3 text-xl">${details.icon}</div>
             <div class="flex-grow">
                 <div class="task-name"></div>
-                ${task.durationInMinutes ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>` : ""}
-                <div class="task-category-badge ${details.color}">
-                    ${categoryLabels?.[task.kategorie] ?? task.kategorie}
+                <div class="flex items-center gap-2 text-sm text-secondary mt-1">
+                    <span class="task-category-badge ${details.color}">
+                        ${categoryLabels?.[task.kategorie] ?? task.kategorie}
+                    </span>
+                    ${task.durationInMinutes ? `
+                    <span class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>
+                        ${task.durationInMinutes} Min
+                    </span>` : ""}
                 </div>
             </div>
         </div>
         <div class="task-actions mt-3 flex justify-end">
-            <button
-                class="task-card-button text-secondary hover:bg-border-color relative overflow-hidden"
-                aria-label="Bearbeiten"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                     stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582
-                             16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0
-                             011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25
-                             2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25
-                             2.25 0 015.25 6H10"/>
+            <button data-action="edit" class="task-card-button text-secondary hover:bg-border-color relative overflow-hidden" aria-label="Bearbeiten">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
                 </svg>
             </button>
-            <button
-                class="task-card-button ${task.erledigt ? "bg-green-500" : "border-2 border-current"} text-white font-bold text-lg relative overflow-hidden"
-                aria-label="${task.erledigt ? "Erledigt" : "Als erledigt markieren"}"
-            >
+            <button data-action="toggle-complete" class="task-card-button ${task.erledigt ? "bg-green-500" : "border-2 border-current"} text-white font-bold text-lg relative overflow-hidden" aria-label="${task.erledigt ? "Erledigt" : "Als erledigt markieren"}">
                 ${task.erledigt ? "✓" : ""}
             </button>
-            <button
-                class="task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden"
-                aria-label="Löschen"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                     stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107
-                             1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244
-                             2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456
-                             0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114
-                             1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5
-                             0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0
-                             00-3.32 0c-1.18.037-2.09 1.022-2.09
-                             2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+            <button data-action="delete" class="task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden" aria-label="Löschen">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
                 </svg>
             </button>
         </div>
@@ -352,6 +334,34 @@ export function scrollToCurrentDay() {
             container.scrollTo({ left: todayEl.offsetLeft - container.getBoundingClientRect().width * 0.05, behavior: "smooth" });
         }
     }
+}
+
+export function starteKonfetti(container = document.body) {
+    const timeouts = [];
+    const elements = [];
+
+    for (let i = 0; i < 50; i++) {
+        const konfetti = document.createElement("div");
+        konfetti.className = "konfetti"; // Assume CSS class handles animation
+        konfetti.style.position = "absolute";
+        konfetti.style.left = `${Math.random() * 100}%`;
+        konfetti.style.top = `${Math.random() * 100 - 20}%`;
+        konfetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+        konfetti.style.transform = `scale(${Math.random() * 0.75 + 0.25})`;
+        konfetti.style.animationDelay = `${Math.random() * 3}s`;
+        container.appendChild(konfetti);
+        elements.push(konfetti);
+
+        const timeout = setTimeout(() => {
+            konfetti.remove();
+        }, 3000 + Math.random() * 2000);
+        timeouts.push(timeout);
+    }
+
+    return function cleanup() {
+        timeouts.forEach(clearTimeout);
+        elements.forEach(el => el.remove());
+    };
 }
 
 export function createRipple(button, event) {
