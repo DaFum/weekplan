@@ -421,7 +421,7 @@ export function renderTaskModal(state, taskId = null) {
     const durationInput = document.getElementById("task-duration");
     const taskDateSelect = document.getElementById("task-date");
 
-    const taskToEdit = taskId ? tasks.find(t => t && t.id === taskId) : null;
+    const taskToEdit = taskId ? tasks.find(t => t.id === taskId) : null;
 
     if (taskToEdit) {
         if (title) title.textContent = "Aufgabe bearbeiten";
