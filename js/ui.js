@@ -1,6 +1,6 @@
 import { getState, updateState } from "./state.js";
 import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes } from "./utils.js";
-import { kategorieDetails, motivationsSprueche } from "./config.js";
+import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
 import { updateMetaBar } from "./theme.js";
 import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
 
@@ -282,18 +282,12 @@ function createTaskElement(task) {
             <div class="mr-3 text-xl">${details.icon}</div>
             <div class="flex-grow">
                 <div class="task-name"></div>
-import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
-                    ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>`
-                    : ""}
--                <div class="task-category-badge ${details.color}">
+                ${task.durationInMinutes ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>` : ""}
                 <div class="task-category-badge ${details.color}">
                     ${categoryLabels?.[task.kategorie] ?? task.kategorie}
                 </div>
             </div>
         </div>
-    `;
-    // …rest of the function…
-}
         <div class="task-actions mt-3 flex justify-end">
             <button
                 class="task-card-button text-secondary hover:bg-border-color relative overflow-hidden"
