@@ -358,36 +358,20 @@ export function createRipple(button, event) {
     const circle = document.createElement("span");
     const diameter = Math.max(button.clientWidth, button.clientHeight);
     const radius = diameter / 2;
+    const rect = button.getBoundingClientRect();
 
     circle.style.width = circle.style.height = `${diameter}px`;
-    circle.style.left = `${event.clientX - button.getBoundingClientRect().left - radius}px`;
-    circle.style.top = `${event.clientY - button.getBoundingClientRect().top - radius}px`;
-    circle.classList.add("ripple");
+    circle.style.left  = `${event.clientX - rect.left - radius}px`;
+    circle.style.top   = `${event.clientY - rect.top - radius}px`;
+    circle.className   = "ripple";
 
-    const ripple = button.getElementsByClassName("ripple")[0];
-    if (ripple) {
-        ripple.remove();
-    }
+    // Remove any existing ripple before adding the new one
+    button.querySelector(".ripple")?.remove();
+    button.appendChild(circle);
 
-        if (!container) return;
-    
-        const timeouts = [];
-        for (let i = 0; i < 50; i++) {
-            const konfetti = document.createElement("div");
-            konfetti.className = "konfetti-stueck";
-            konfetti.style.left = `${Math.random() * 100}vw`;
-            konfetti.style.animationDelay = `${Math.random() * 2}s`;
-            konfetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 60%)`;
-            konfetti.style.transform = `scale(${Math.random() * 0.7 + 0.5})`;
-            container.appendChild(konfetti);
-            timeouts.push(setTimeout(() => konfetti.remove(), 3000));
-        }
-    
-        // Optional: Return function to clear timeouts if needed
-        return () => timeouts.forEach(clearTimeout);
-    }
+    // Clean up after the animation ends
+    circle.addEventListener("animationend", () => circle.remove(), { once: true });
 }
-
 export function updateCoinsDisplay(state) {
     const el = document.getElementById("coins-count");
     if (el) el.textContent = state.coins;
