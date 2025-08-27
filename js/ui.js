@@ -392,12 +392,6 @@ export function createRipple(button, event) {
         // Optional: Return function to clear timeouts if needed
         return () => timeouts.forEach(clearTimeout);
     }
-        konfetti.style.animationDelay = `${Math.random() * 2}s`;
-        konfetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 60%)`;
-        konfetti.style.transform = `scale(${Math.random() * 0.7 + 0.5})`;
-        container.appendChild(konfetti);
-        setTimeout(() => konfetti.remove(), 3000);
-    }
 }
 
 export function updateCoinsDisplay(state) {
