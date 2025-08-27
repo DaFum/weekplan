@@ -142,6 +142,9 @@ function renderMemoryBoard() {
     const board = document.getElementById("memory-board");
     if (!board) return;
 
+    // Remove any existing event listener
+    board.removeEventListener("click", handleCardClick);
+
     board.innerHTML = "";
     cards.forEach((symbol, index) => {
         const card = document.createElement("div");
@@ -161,12 +164,11 @@ function renderMemoryBoard() {
         } else {
             card.textContent = "?";
         }
-
-        if (!isMatched) {
-            card.addEventListener("click", () => flipCard(index));
-        }
         board.appendChild(card);
     });
+
+    // Add a single delegated event listener
+    board.addEventListener("click", handleCardClick);
 
     // Update score, pairs, and progress bar
     const scoreEl = document.getElementById("memory-score");
@@ -176,6 +178,14 @@ function renderMemoryBoard() {
     if (scoreEl) scoreEl.textContent = score;
     if (pairsEl) pairsEl.textContent = `${matchedPairs}/${cards.length / 2}`;
     if (progressEl) progressEl.style.width = `${(matchedPairs / (cards.length / 2)) * 100}%`;
+}
+
+function handleCardClick(event) {
+    const card = event.target.closest(".memory-card");
+    if (card && !card.classList.contains("matched")) {
+        const index = parseInt(card.dataset.index, 10);
+        flipCard(index);
+    }
 }
 
 

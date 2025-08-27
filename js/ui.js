@@ -236,7 +236,7 @@ function renderAllTasks(tasks) {
         const isoDate = list.id.replace("aufgaben-liste-", "");
         const tasksForDay = tasks.filter(t => t.date === isoDate);
         if (tasksForDay.length === 0) {
-            list.innerHTML = createEmptyState();
+            list.appendChild(createEmptyState());
         } else {
             tasksForDay.forEach(task => list.appendChild(createTaskElement(task)));
         }
@@ -288,7 +288,7 @@ function removeTaskFromDOM(taskId) {
         const list = taskElement.parentElement;
         taskElement.remove();
         if (list && list.children.length === 0) {
-            list.innerHTML = createEmptyState();
+            list.appendChild(createEmptyState());
         }
     }
 }
@@ -309,13 +309,29 @@ function updateTaskInDOM(task) {
  * @returns {string} The HTML string for the empty state.
  */
 function createEmptyState() {
-    return `<div class="empty-tasks">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="empty-tasks-icon">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="empty-tasks-title">Keine Aufgaben!</p>
-                <p class="empty-tasks-text">Füge eine neue Aufgabe hinzu.</p>
-            </div>`;
+    const container = document.createElement("div");
+    container.className = "empty-tasks";
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("stroke-width", "1.5");
+    svg.setAttribute("stroke", "currentColor");
+    svg.className = "empty-tasks-icon";
+    svg.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />`;
+    container.appendChild(svg);
+
+    const title = document.createElement("p");
+    title.className = "empty-tasks-title";
+    title.textContent = "Keine Aufgaben!";
+    container.appendChild(title);
+
+    const text = document.createElement("p");
+    text.className = "empty-tasks-text";
+    text.textContent = "Füge eine neue Aufgabe hinzu.";
+    container.appendChild(text);
+
+    return container;
 }
 
 /**
@@ -358,6 +374,8 @@ function createTaskElement(task) {
     const element = document.createElement("div");
     element.className = `task-card ${task.erledigt ? "completed" : ""}`;
     element.dataset.taskId = task.id;
+    element.setAttribute("role", "listitem");
+    element.setAttribute("aria-checked", task.erledigt ? "true" : "false");
 
     // Create DOM structure safely
     const flexContainer = document.createElement("div");

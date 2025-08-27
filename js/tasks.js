@@ -170,7 +170,6 @@ export function setPcTimeLimit() {
         }
     );
 }
-}
 
 /**
  * Opens a modal to set the weekly goal (number of tasks).
@@ -192,5 +191,4 @@ export function setWeeklyGoal() {
             }
         }
     );
-}
 }
