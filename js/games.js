@@ -113,14 +113,14 @@ function renderMemoryBoard() {
         const isMatched = matchedSymbols.includes(symbol);
 
         if (isFlipped || isMatched) {
-            card.innerHTML = symbol;
+            card.textContent = symbol;
             card.classList.add("flipped");
             if (isMatched) {
                 card.classList.add("matched", "bg-green-500");
                 card.style.pointerEvents = "none";
             }
         } else {
-            card.innerHTML = "?";
+            card.textContent = "?";
         }
 
         if (!isMatched) {
