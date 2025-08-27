@@ -282,7 +282,7 @@ function createTaskElement(task) {
             <div class="mr-3 text-xl">${details.icon}</div>
             <div class="flex-grow">
                 <div class="task-name"></div>
-                ${task.kategorie === "pc" && task.durationInMinutes
+import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
                     ? `<span class="task-duration">(${task.durationInMinutes} Min)</span>`
                     : ""}
 -                <div class="task-category-badge ${details.color}">
