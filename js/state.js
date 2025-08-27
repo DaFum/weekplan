@@ -65,7 +65,6 @@ export function subscribe(key, callback) {
  * Benachrichtigt die Listener, deren abonnierte Daten sich geändert haben.
  *
  * @param {Object} newState - Das Objekt mit den neuen State-Werten.
- * @param {Object} oldState - Der Zustand vor der Aktualisierung.
  */
 function notifyListeners(newState, oldState) {
     const changedKeys = Object.keys(newState).filter(key => JSON.stringify(newState[key]) !== JSON.stringify(oldState[key]));
