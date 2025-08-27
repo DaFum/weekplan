@@ -1,24 +1,38 @@
+// Konfetti effect configuration
+const KONFETTI_COUNT = 50;
+const KONFETTI_HUE_RANGE = 360;
+const KONFETTI_SCALE_RANDOM_FACTOR = 0.75;
+const KONFETTI_SCALE_MIN = 0.25;
+const KONFETTI_ANIMATION_DELAY_MAX_S = 3;
+const KONFETTI_BASE_DURATION_MS = 3000;
+const KONFETTI_RANDOM_DURATION_MS = 2000;
+const KONFETTI_POSITION_PERCENT_RANGE = 100;
+const KONFETTI_TOP_OFFSET_PERCENT = 20;
+
 export function starteKonfetti(container = document.body) {
     const timeouts = [];
     const elements = [];
+    const fragment = document.createDocumentFragment();
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < KONFETTI_COUNT; i++) {
         const konfetti = document.createElement("div");
         konfetti.className = "konfetti"; // Assume CSS class handles animation
         konfetti.style.position = "absolute";
-        konfetti.style.left = `${Math.random() * 100}%`;
-        konfetti.style.top = `${Math.random() * 100 - 20}%`;
-        konfetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
-        konfetti.style.transform = `scale(${Math.random() * 0.75 + 0.25})`;
-        konfetti.style.animationDelay = `${Math.random() * 3}s`;
-        container.appendChild(konfetti);
+        konfetti.style.left = `${Math.random() * KONFETTI_POSITION_PERCENT_RANGE}%`;
+        konfetti.style.top = `${Math.random() * KONFETTI_POSITION_PERCENT_RANGE - KONFETTI_TOP_OFFSET_PERCENT}%`;
+        konfetti.style.backgroundColor = `hsl(${Math.random() * KONFETTI_HUE_RANGE}, 100%, 50%)`;
+        konfetti.style.transform = `scale(${Math.random() * KONFETTI_SCALE_RANDOM_FACTOR + KONFETTI_SCALE_MIN})`;
+        konfetti.style.animationDelay = `${Math.random() * KONFETTI_ANIMATION_DELAY_MAX_S}s`;
+        fragment.appendChild(konfetti);
         elements.push(konfetti);
 
         const timeout = setTimeout(() => {
             konfetti.remove();
-        }, 3000 + Math.random() * 2000);
+        }, KONFETTI_BASE_DURATION_MS + Math.random() * KONFETTI_RANDOM_DURATION_MS);
         timeouts.push(timeout);
     }
+
+    container.appendChild(fragment);
 
     return function cleanup() {
         timeouts.forEach(clearTimeout);

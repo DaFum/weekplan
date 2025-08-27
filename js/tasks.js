@@ -8,13 +8,6 @@ export function getPunkteFuerTag(isoDate, tasks) {
     return tasks.filter(t => t.date === isoDate && t.erledigt).length;
 }
 
-export function updatePunkteAnzeige(state) {
-    document.querySelectorAll(".tag-karte").forEach(card => {
-        const anzeige = card.querySelector(".day-score");
-        if (anzeige) anzeige.innerHTML = `<span class="text-yellow-500">⭐</span> ${getPunkteFuerTag(card.id, state.tasks)}`;
-    });
-}
-
 export function getCurrentStreak(tasks) {
     if (!tasks || tasks.length === 0) return 0;
 

@@ -2,7 +2,7 @@ import { getState, updateState } from "./state.js";
 import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes, addDays } from "./utils.js";
 import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
 import { updateMetaBar } from "./theme.js";
-import { getCurrentStreak, updatePunkteAnzeige } from "./tasks.js";
+import { getPunkteFuerTag, getCurrentStreak } from "./tasks.js";
 import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
 
 let lastRenderedTasks = [];
@@ -18,6 +18,13 @@ export function renderAllUI() {
     renderPlan(state);
     updateAllTrackers(state);
     updateCoinsDisplay(state);
+}
+
+export function updatePunkteAnzeige(state) {
+    document.querySelectorAll(".tag-karte").forEach(card => {
+        const anzeige = card.querySelector(".day-score");
+        if (anzeige) anzeige.innerHTML = `<span class="text-yellow-500">⭐</span> ${getPunkteFuerTag(card.id, state.tasks)}`;
+    });
 }
 
 function updateAllTrackers(state) {
