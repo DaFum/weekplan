@@ -28,6 +28,10 @@ export function starteKonfetti(container = document.body) {
 
         const timeout = setTimeout(() => {
             konfetti.remove();
+            const index = timeouts.indexOf(timeout);
+            if (index > -1) {
+                timeouts.splice(index, 1);
+            }
         }, KONFETTI_BASE_DURATION_MS + Math.random() * KONFETTI_RANDOM_DURATION_MS);
         timeouts.push(timeout);
     }
