@@ -1,8 +1,37 @@
 import { getState, updateState } from "./state.js";
 import { addCoins } from "./games.js";
-import { starteKonfetti } from "./ui.js";
+import { starteKonfetti } from "./effects.js";
 import { closeModal, openPromptModal } from "./events.js";
 import { formatDisplayDate, getISODate, getStartOfWeek } from "./utils.js";
+
+export function getPunkteFuerTag(isoDate, tasks) {
+    return tasks.filter(t => t.date === isoDate && t.erledigt).length;
+}
+
+export function updatePunkteAnzeige(state) {
+    document.querySelectorAll(".tag-karte").forEach(card => {
+        const anzeige = card.querySelector(".day-score");
+        if (anzeige) anzeige.innerHTML = `<span class="text-yellow-500">⭐</span> ${getPunkteFuerTag(card.id, state.tasks)}`;
+    });
+}
+
+export function getCurrentStreak(tasks) {
+    if (!tasks || tasks.length === 0) return 0;
+
+    const erledigteTage = new Set(tasks.filter(t => t.erledigt).map(t => t.date));
+    if (erledigteTage.size === 0) return 0;
+
+    let streak = 0;
+    let cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+
+    while (erledigteTage.has(getISODate(cursor))) {
+        streak++;
+        cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return streak;
+}
 
 /**
  * Speichert ein Task-Formular: erstellt eine neue Aufgabe oder aktualisiert eine bestehende.

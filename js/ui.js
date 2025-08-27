@@ -1,7 +1,8 @@
 import { getState, updateState } from "./state.js";
-import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes } from "./utils.js";
+import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes, addDays } from "./utils.js";
 import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
 import { updateMetaBar } from "./theme.js";
+import { getCurrentStreak, updatePunkteAnzeige } from "./tasks.js";
 import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
 
 let lastRenderedTasks = [];
@@ -17,7 +18,6 @@ export function renderAllUI() {
     renderPlan(state);
     updateAllTrackers(state);
     updateCoinsDisplay(state);
-    updateMetaBar(state);
 }
 
 function updateAllTrackers(state) {
@@ -315,17 +315,6 @@ function createTaskElement(task) {
     return element;
 }
 
-export function getPunkteFuerTag(isoDate, tasks) {
-    return tasks.filter(t => t.date === isoDate && t.erledigt).length;
-}
-
-export function updatePunkteAnzeige(state) {
-    document.querySelectorAll(".tag-karte").forEach(card => {
-        const anzeige = card.querySelector(".day-score");
-        if (anzeige) anzeige.innerHTML = `<span class="text-yellow-500">⭐</span> ${getPunkteFuerTag(card.id, state.tasks)}`;
-    });
-}
-
 export function scrollToCurrentDay() {
     const todayEl = document.querySelector(".today-card");
     if (todayEl) {
@@ -336,52 +325,6 @@ export function scrollToCurrentDay() {
     }
 }
 
-export function starteKonfetti(container = document.body) {
-    const timeouts = [];
-    const elements = [];
-
-    for (let i = 0; i < 50; i++) {
-        const konfetti = document.createElement("div");
-        konfetti.className = "konfetti"; // Assume CSS class handles animation
-        konfetti.style.position = "absolute";
-        konfetti.style.left = `${Math.random() * 100}%`;
-        konfetti.style.top = `${Math.random() * 100 - 20}%`;
-        konfetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
-        konfetti.style.transform = `scale(${Math.random() * 0.75 + 0.25})`;
-        konfetti.style.animationDelay = `${Math.random() * 3}s`;
-        container.appendChild(konfetti);
-        elements.push(konfetti);
-
-        const timeout = setTimeout(() => {
-            konfetti.remove();
-        }, 3000 + Math.random() * 2000);
-        timeouts.push(timeout);
-    }
-
-    return function cleanup() {
-        timeouts.forEach(clearTimeout);
-        elements.forEach(el => el.remove());
-    };
-}
-
-export function createRipple(button, event) {
-    const circle = document.createElement("span");
-    const diameter = Math.max(button.clientWidth, button.clientHeight);
-    const radius = diameter / 2;
-    const rect = button.getBoundingClientRect();
-
-    circle.style.width = circle.style.height = `${diameter}px`;
-    circle.style.left  = `${event.clientX - rect.left - radius}px`;
-    circle.style.top   = `${event.clientY - rect.top - radius}px`;
-    circle.className   = "ripple";
-
-    // Remove any existing ripple before adding the new one
-    button.querySelector(".ripple")?.remove();
-    button.appendChild(circle);
-
-    // Clean up after the animation ends
-    circle.addEventListener("animationend", () => circle.remove(), { once: true });
-}
 export function updateCoinsDisplay(state) {
     const el = document.getElementById("coins-count");
     if (el) el.textContent = state.coins;
@@ -390,24 +333,6 @@ export function updateCoinsDisplay(state) {
 export const updateMotivationsspruch = () => {
     const el = document.getElementById("motivations-spruch");
     if (el) el.textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
-}
-
-export function getCurrentStreak(tasks) {
-    if (!tasks || tasks.length === 0) return 0;
-
-    const erledigteTage = new Set(tasks.filter(t => t.erledigt).map(t => t.date));
-    if (erledigteTage.size === 0) return 0;
-
-    let streak = 0;
-    let cursor = new Date();
-    cursor.setHours(0, 0, 0, 0);
-
-    while (erledigteTage.has(getISODate(cursor))) {
-        streak++;
-        cursor.setDate(cursor.getDate() - 1);
-    }
-
-    return streak;
 }
 
 export function renderTaskModal(state, taskId = null) {

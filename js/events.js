@@ -1,5 +1,6 @@
 import { toggleTheme } from "./theme.js";
-import { createRipple, showWoche, renderTaskModal } from "./ui.js";
+import { showWoche, renderTaskModal } from "./ui.js";
+import { createRipple } from "./effects.js";
 import { setPcTimeLimit, setWeeklyGoal, toggleTask, deleteTask, saveTask } from "./tasks.js";
 import { getState, updateState } from "./state.js";
 import { openGame, closeGame, checkQuizAnswer } from "./games.js";

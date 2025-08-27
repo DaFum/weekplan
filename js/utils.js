@@ -12,6 +12,12 @@ export const getStartOfWeek = (date) => {
 
 export const formatDisplayDate = (date) => `${wochentage[date.getDay()]}, ${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}`;
 
+export const addDays = (date, days) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+};
+
 export const formatMinutes = (minutes) => {
     if (minutes < 0) minutes = 0;
     const h = Math.floor(minutes / 60);
@@ -34,27 +40,6 @@ export function shuffleArray(array) {
         [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
     return newArray;
-}
-
-/**
- * Escapiert spezielle Zeichen in einer Eingabe für sichere Einbettung in HTML.
- *
- * Wandelt den übergebenen Wert in einen String und ersetzt die Zeichen
- * &, <, >, " und ' durch ihre HTML-Entities (&amp;, &lt;, &gt;, &quot;, &#39;).
- *
- * @param {any} str - Beliebiger Wert; wird per String() in einen String konvertiert.
- * @returns {string} Der HTML-escaped String.
- */
-export function escapeHTML(str) {
-    const s = String(str);
-    const map = {
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    };
-    return s.replace(/[&<>"']/g, ch => map[ch]);
 }
 
 /**
