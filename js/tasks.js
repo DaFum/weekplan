@@ -149,9 +149,13 @@ export function setPcTimeLimit() {
         "Wie viele Stunden PC-Zeit pro Woche?",
         pcStundenGesamt,
         (value) => {
-            updateState({ pcStundenGesamt: Number(value) });
+            const n = Number(value);
+            if (Number.isFinite(n) && n >= 0) {
+                updateState({ pcStundenGesamt: n });
+            }
         }
     );
+}
 }
 
 /**
