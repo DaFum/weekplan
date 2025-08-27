@@ -17,8 +17,13 @@ import { updateState } from './state.js';
  */
 export async function initSounds() {
     try {
-        // Dynamically import the Tone.js library
-        const Tone = await import('https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js');
+        // Dynamically import the Tone.js library with a timeout
+        const importPromise = import('https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js');
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Tone.js import timed out")), 5000)
+        );
+
+        const Tone = await Promise.race([importPromise, timeoutPromise]);
         try {
             // Create the synthesizers
             const sounds = {
@@ -37,5 +42,6 @@ export async function initSounds() {
     } catch (error) {
         // Log an error if Tone.js could not be loaded
         console.error("Tone.js could not be loaded. Audio functions are disabled.", error);
+        updateState({ sounds: {} });
     }
 }

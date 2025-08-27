@@ -10,6 +10,23 @@ import { openGame, closeGame, checkQuizAnswer } from "./games.js";
  * Initializes central event handlers for the user interface.
  */
 export function initEventListeners() {
+    // Start audio context on the first user gesture to comply with autoplay policies
+    const startAudio = async () => {
+        // Tone.js is loaded dynamically, so we access it via window
+        if (window.Tone && window.Tone.context.state !== "running") {
+            try {
+                await window.Tone.start();
+                console.log("AudioContext started successfully.");
+            } catch (e) {
+                console.error("Could not start AudioContext:", e);
+            }
+        }
+    };
+    // Using pointerdown for faster response on touch devices
+    document.body.addEventListener("pointerdown", startAudio, { once: true });
+    document.body.addEventListener("click", startAudio, { once: true });
+
+
     // Add a single click event listener to the body for event delegation
     document.body.addEventListener("click", function(event) {
         const target = event.target;
@@ -45,27 +62,24 @@ export function initEventListeners() {
         // Handle week navigation
         const navButton = target.closest(".nav-button");
         if (navButton) {
-            showWoche(parseInt(navButton.dataset.weekIndex));
+            showWoche(parseInt(navButton.dataset.weekIndex, 10));
         }
 
         // Handle quiz answer selection
         const quizOption = target.closest(".quiz-option");
         if (quizOption) {
-            checkQuizAnswer(parseInt(quizOption.dataset.index));
+            checkQuizAnswer(parseInt(quizOption.dataset.index, 10));
         }
 
         // Apply ripple effect to buttons
         const btn = event.target.closest("button");
-        if (btn) createRipple(btn, event);
+        if (btn && !btn.disabled) createRipple(btn, event);
     });
 
     // Add submit event listener to the task form
     const taskForm = document.getElementById("task-form");
     if (taskForm) {
-        taskForm.addEventListener("submit", (event) => {
-            event.preventDefault();
-            saveTask(event);
-        });
+        taskForm.addEventListener("submit", saveTask);
     }
 
     // Add submit event listener to the prompt form
@@ -90,7 +104,7 @@ export function initEventListeners() {
  */
 export function openModal(taskId = null) {
     renderTaskModal(getState(), taskId);
-    document.getElementById("task-modal").classList.remove("hidden");
+    document.getElementById("task-modal")?.classList.remove("hidden");
     document.body.classList.add("modal-open");
 }
 
@@ -98,7 +112,7 @@ export function openModal(taskId = null) {
  * Closes the task modal.
  */
 export function closeModal() {
-    document.getElementById("task-modal").classList.add("hidden");
+    document.getElementById("task-modal")?.classList.add("hidden");
     document.body.classList.remove("modal-open");
 }
 
@@ -111,13 +125,15 @@ export function closeModal() {
  */
 export function openPromptModal(title, label, initialValue, callback) {
     updateState({ promptCallback: callback });
-    document.getElementById("prompt-modal-title").textContent = title;
-    document.getElementById("prompt-modal-label").textContent = label;
+    document.getElementById("prompt-modal-title")?.textContent = title;
+    document.getElementById("prompt-modal-label")?.textContent = label;
     const input = document.getElementById("prompt-modal-input");
-    input.value = initialValue;
-    input.step = label.toLowerCase().includes("stunden") ? "0.5" : "1";
-    input.min = "0";
-    document.getElementById("prompt-modal").classList.remove("hidden");
+    if (input) {
+        input.value = initialValue;
+        input.step = label.toLowerCase().includes("stunden") ? "0.5" : "1";
+        input.min = "0";
+    }
+    document.getElementById("prompt-modal")?.classList.remove("hidden");
     document.body.classList.add("modal-open");
 }
 
@@ -125,8 +141,8 @@ export function openPromptModal(title, label, initialValue, callback) {
  * Closes the prompt modal.
  */
 export function closePromptModal() {
-    document.getElementById("prompt-modal").classList.add("hidden");
-    if (!document.getElementById("task-modal").classList.contains("hidden")) {
+    document.getElementById("prompt-modal")?.classList.add("hidden");
+    if (!document.getElementById("task-modal")?.classList.contains("hidden")) {
         // Do nothing if the task modal is open
     } else {
         document.body.classList.remove("modal-open");

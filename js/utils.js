@@ -62,6 +62,9 @@ export const formatMinutes = (minutes) => {
  * @returns {Array<any>} A new, shuffled array.
  */
 export function shuffleArray(array) {
+    if (!array || !Array.isArray(array)) {
+        return [];
+    }
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -79,12 +82,14 @@ export function shuffleArray(array) {
  */
 export function debounce(func, wait) {
     let timeout;
-    return function(...args) {
+    function debounced(...args) {
         const later = () => {
             timeout = null;
             func.apply(this, args);
         };
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
-    };
+    }
+    debounced.cancel = () => { clearTimeout(timeout); timeout = null; };
+    return debounced;
 }

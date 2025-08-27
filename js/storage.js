@@ -27,6 +27,8 @@ export const storage = {
     }
 };
 
+const DATA_KEY = 'wochenplanerData';
+
 /**
  * Saves selected parts of the application state to persistent storage.
  *
@@ -44,31 +46,33 @@ export function saveData(state) {
         theme: state.theme,
         coins: state.coins
     };
+    let json;
     try {
-        storage.setItem('wochenplanerData', JSON.stringify(dataToSave));
+        json = JSON.stringify(dataToSave);
     } catch (e) {
         console.error("Error saving data:", e);
+        return;
     }
+    storage.setItem(DATA_KEY, json);
 }
 
 /**
  * Loads persisted application data from local storage.
  *
- * This function attempts to read and parse the JSON string under the key 'wochenplanerData' from `storage`.
- * If successful, it returns the parsed object (expected fields: e.g., `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme`, `coins`).
- * In case of missing data, JSON errors, or other errors, it returns an empty object and logs the error to the console.
+ * Bei fehlenden Daten oder JSON-Fehlern wird ein normalisiertes Objekt mit Default-Werten
+ * (z. B. `tasks: []`, `pcStundenGesamt: 0`, `wochenZiel: 10`, `coins: 0`) zurückgegeben.
  *
- * @returns {Object} The loaded data object or an empty object in case of an error or non-existent entry.
+ * @returns {Object} Normalisiertes Datenobjekt (immer mit Default-Feldern befüllt).
  */
 export function loadData() {
     let data = {};
-    try {
-        const savedData = storage.getItem('wochenplanerData');
-        if (savedData) {
+    const savedData = storage.getItem(DATA_KEY);
+    if (savedData) {
+        try {
             data = JSON.parse(savedData);
+        } catch (e) {
+            console.error("Error loading data:", e);
         }
-    } catch (e) {
-        console.error("Error loading data:", e);
     }
     
     // Ensure required properties exist with default values (both for success and error cases)

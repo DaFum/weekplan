@@ -29,10 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Apply the determined theme immediately
     updateTheme(theme);
 
-    // Initialize various parts of the application
+    // Initialize various parts of theapplication
     initEventListeners();
     initSounds();
-    cleanupOldTasks();
 
     // Perform the initial render of the UI
     renderAllUI();
@@ -72,6 +71,9 @@ document.addEventListener("DOMContentLoaded", () => {
         updateCoinsDisplay(state);
         saveData(state);
     });
+
+    // Clean up old tasks after subscriptions are registered to ensure persistence
+    cleanupOldTasks();
 
     // Request notification permission if not already asked
     if (!localStorage.getItem("notifsAsked") && "Notification" in window) {

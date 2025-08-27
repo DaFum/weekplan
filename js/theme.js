@@ -21,10 +21,11 @@ export function toggleTheme() {
  * @param {string} theme - Expects 'dark' to activate dark mode; any other value switches to light mode.
  */
 export function updateTheme(theme) {
-    if (theme === "dark") {
-        document.body.classList.add("dark");
-    } else {
-        document.body.classList.remove("dark");
+    const isDark = theme === "dark";
+    document.body.classList.toggle("dark", isDark);
+    const toggle = document.getElementById("theme-toggle");
+    if (toggle) {
+        toggle.setAttribute("aria-pressed", isDark);
     }
     updateThemeIcons(theme);
 }
@@ -39,7 +40,8 @@ export function updateTheme(theme) {
  */
 function updateThemeIcons(theme) {
     const isDark = theme === "dark";
-    document.getElementById("theme-icon").textContent = isDark ? "🌙" : "🌞";
+    const el = document.getElementById("theme-icon");
+    if (el) el.textContent = isDark ? "🌙" : "🌞";
 }
 
 /**
@@ -59,5 +61,6 @@ export function updateMetaBar(state) {
       ? Math.max(0, Math.min(100, Math.round((done / wochenZiel) * 100)))
       : 0;
     document.title = `${percent}% · Wochen-Power`;
-    document.getElementById("themeMeta").setAttribute("content", percent >= 100 ? "#10b981" : "#0284c7");
+    const meta = document.getElementById("themeMeta");
+    if (meta) meta.setAttribute("content", percent >= 100 ? "#10b981" : "#0284c7");
 }

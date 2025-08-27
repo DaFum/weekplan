@@ -33,6 +33,7 @@ export function initGames() {
  */
 export function openGame(gameName) {
     updateState({ currentGame: gameName });
+    document.body.classList.add("modal-open");
     if (gameName === "memory") {
         document.getElementById("memory-game-modal")?.classList.remove("hidden");
         initMemoryGame();
@@ -50,6 +51,11 @@ export function closeGame() {
     const modalId = currentGame === "memory" ? "memory-game-modal" : "quiz-game-modal";
     document.getElementById(modalId)?.classList.add("hidden");
     updateState({ currentGame: null });
+    // Nur entfernen, wenn keine anderen Modals offen sind
+    const hasOtherOpen =
+        !document.getElementById("task-modal")?.classList.contains("hidden") ||
+        !document.getElementById("prompt-modal")?.classList.contains("hidden");
+    if (!hasOtherOpen) document.body.classList.remove("modal-open");
 }
 
 // --- Memory Game Logic ---
@@ -100,7 +106,7 @@ function flipCard(index) {
  * Checks if the two flipped cards match.
  */
 function checkMatch() {
-    let { memory, sounds, coins } = getState();
+    let { memory, sounds } = getState();
     let { flippedCards, cards, matchedPairs, score, matchedSymbols } = memory;
 
     const [index1, index2] = flippedCards;
@@ -114,12 +120,11 @@ function checkMatch() {
         const newMatchedSymbols = [...matchedSymbols, symbol1];
         if (matchedPairs === cards.length / 2) {
             // If all pairs are matched, award bonus coins and play a sound
-            coins += 20;
+            addCoins(20);
             sounds.confetti?.triggerAttackRelease("C5", "0.5");
         }
         updateState({
-            memory: { ...memory, matchedPairs, score, flippedCards: [], matchedSymbols: newMatchedSymbols },
-            coins
+            memory: { ...memory, matchedPairs, score, flippedCards: [], matchedSymbols: newMatchedSymbols }
         });
     } else {
         // If the cards don't match, flip them back over

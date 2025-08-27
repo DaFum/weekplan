@@ -17,9 +17,15 @@ export const motivationsSprueche = [
 
 // Details for different task categories, including icon and color
 export const kategorieDetails = {
-    schule: { icon: '📚', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-    pc: { icon: '💻', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
-    sonstiges: { icon: '🎉', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' }
+    schule: { icon: '📚', color: 'category-badge-schule' },
+    pc: { icon: '💻', color: 'category-badge-pc' },
+    sonstiges: { icon: '🎉', color: 'category-badge-sonstiges' }
+};
+
+export const categoryLabels = {
+    schule: 'Schule',
+    pc: 'PC-Zeit',
+    sonstiges: 'Freizeit'
 };
 
 // Array of quiz questions for the quiz game

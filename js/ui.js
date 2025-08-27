@@ -28,8 +28,8 @@ export function renderAllUI() {
  */
 export function updatePunkteAnzeige(state) {
     document.querySelectorAll(".tag-karte").forEach(card => {
-        const anzeige = card.querySelector(".day-score");
-        if (anzeige) anzeige.lastChild.textContent = ` ${getPunkteFuerTag(card.id, state.tasks)}`;
+        const anzeige = card.querySelector(".score-value");
+        if (anzeige) anzeige.textContent = ` ${getPunkteFuerTag(card.id, state.tasks)}`;
     });
 }
 
@@ -195,7 +195,7 @@ export function renderPlan(state) {
                         <h3 class="day-title">${formatDisplayDate(currentDate).split(",")[0]}</h3>
                         <div class="day-date">${formatDisplayDate(currentDate).split(",")[1]}</div>
                     </div>
-                    <div class="day-score"><span class="text-yellow-500">⭐</span> 0</div>
+                    <div class="day-score"><span class="text-yellow-500">⭐</span><span class="score-value"> 0</span></div>
                 </div>
                 <div id="aufgaben-liste-${isoDate}" class="tasks-container space-y-3"></div>`;
             tagesContainer.appendChild(tagesKarte);
@@ -359,41 +359,63 @@ function createTaskElement(task) {
     element.className = `task-card ${task.erledigt ? "completed" : ""}`;
     element.dataset.taskId = task.id;
 
-    element.innerHTML = `
-        <div class="flex items-start">
-            <div class="mr-3 text-xl">${details.icon}</div>
-            <div class="flex-grow">
-                <div class="task-name"></div>
-                <div class="flex items-center gap-2 text-sm text-secondary mt-1">
-                    <span class="task-category-badge ${details.color}">
-                        ${categoryLabels?.[task.kategorie] ?? task.kategorie}
-                    </span>
-                    ${task.durationInMinutes ? `
-                    <span class="flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>
-                        ${task.durationInMinutes} Min
-                    </span>` : ""}
-                </div>
-            </div>
-        </div>
-        <div class="task-actions mt-3 flex justify-end">
-            <button data-action="edit" class="task-card-button text-secondary hover:bg-border-color relative overflow-hidden" aria-label="Bearbeiten">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
-                </svg>
-            </button>
-            <button data-action="toggle-complete" class="task-card-button ${task.erledigt ? "bg-green-500" : "border-2 border-current"} text-white font-bold text-lg relative overflow-hidden" aria-label="${task.erledigt ? "Erledigt" : "Als erledigt markieren"}">
-                ${task.erledigt ? "✓" : ""}
-            </button>
-            <button data-action="delete" class="task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden" aria-label="Löschen">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
-                </svg>
-            </button>
-        </div>
+    // Create DOM structure safely
+    const flexContainer = document.createElement("div");
+    flexContainer.className = "flex items-start";
+
+    const iconDiv = document.createElement("div");
+    iconDiv.className = "mr-3 text-xl";
+    iconDiv.textContent = details.icon;
+    flexContainer.appendChild(iconDiv);
+
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "flex-grow";
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "task-name";
+    nameDiv.textContent = String(task.name ?? "");
+    contentDiv.appendChild(nameDiv);
+
+    const metaDiv = document.createElement("div");
+    metaDiv.className = "flex items-center gap-2 text-sm text-secondary mt-1";
+
+    const categoryBadge = document.createElement("span");
+    categoryBadge.className = `task-category-badge ${details.color}`;
+    categoryBadge.textContent = categoryLabels?.[task.kategorie] ?? task.kategorie;
+    metaDiv.appendChild(categoryBadge);
+
+    if (task.durationInMinutes) {
+        const durationSpan = document.createElement("span");
+        durationSpan.className = "flex items-center";
+        durationSpan.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>`;
+        const durationText = document.createTextNode(`${task.durationInMinutes} Min`);
+        durationSpan.appendChild(durationText);
+        metaDiv.appendChild(durationSpan);
+    }
+
+    contentDiv.appendChild(metaDiv);
+    flexContainer.appendChild(contentDiv);
+    element.appendChild(flexContainer);
+
+    const actionsDiv = document.createElement("div");
+    actionsDiv.className = "task-actions mt-3 flex justify-end";
+    actionsDiv.innerHTML = `
+        <button data-action="edit" class="task-card-button text-secondary hover:bg-border-color relative overflow-hidden" aria-label="Bearbeiten">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+            </svg>
+        </button>
+        <button data-action="toggle-complete" class="task-card-button ${task.erledigt ? "bg-green-500" : "border-2 border-current"} text-white font-bold text-lg relative overflow-hidden" aria-label="${task.erledigt ? "Erledigt" : "Als erledigt markieren"}">
+            ${task.erledigt ? "✓" : ""}
+        </button>
+        <button data-action="delete" class="task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden" aria-label="Löschen">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+            </svg>
+        </button>
     `;
-    // Securely set the task name
-    element.querySelector(".task-name").textContent = String(task.name ?? "");
+    element.appendChild(actionsDiv);
+
     return element;
 }
 

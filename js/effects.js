@@ -9,12 +9,20 @@ const KONFETTI_RANDOM_DURATION_MS = 2000; // Random duration to add to the base 
 const KONFETTI_POSITION_PERCENT_RANGE = 100; // Range for positioning confetti in percent
 const KONFETTI_TOP_OFFSET_PERCENT = 20; // Top offset for confetti in percent
 
+// Track the last cleanup function
+let lastKonfettiCleanup = null;
+
 /**
  * Starts the confetti effect.
  * @param {HTMLElement} container - The container element for the confetti. Defaults to document.body.
  * @returns {function} A cleanup function to remove the confetti.
  */
 export function starteKonfetti(container = document.body) {
+    // Clean up previous confetti if it exists
+    if (lastKonfettiCleanup) {
+        lastKonfettiCleanup();
+    }
+
     const timeouts = [];
     const elements = [];
     const fragment = document.createDocumentFragment();
@@ -31,23 +39,23 @@ export function starteKonfetti(container = document.body) {
         fragment.appendChild(konfetti);
         elements.push(konfetti);
 
+        const duration = KONFETTI_BASE_DURATION_MS + Math.random() * KONFETTI_RANDOM_DURATION_MS;
         const timeout = setTimeout(() => {
             konfetti.remove();
-            const index = timeouts.indexOf(timeout);
-            if (index > -1) {
-                timeouts.splice(index, 1);
-            }
-        }, KONFETTI_BASE_DURATION_MS + Math.random() * KONFETTI_RANDOM_DURATION_MS);
+        }, duration);
         timeouts.push(timeout);
     }
 
     container.appendChild(fragment);
 
-    // Return a cleanup function to remove the confetti elements and clear timeouts
-    return function cleanup() {
+    // Create and store the cleanup function
+    lastKonfettiCleanup = function cleanup() {
         timeouts.forEach(clearTimeout);
         elements.forEach(el => el.remove());
+        lastKonfettiCleanup = null;
     };
+
+    return lastKonfettiCleanup;
 }
 
 /**
@@ -61,9 +69,15 @@ export function createRipple(button, event) {
     const radius = diameter / 2;
     const rect = button.getBoundingClientRect();
 
+    // Sicheres Positioning/Clipping
+    const comp = getComputedStyle(button);
+    if (comp.position === "static") button.style.position = "relative";
+    button.style.overflow = "hidden";
+
     circle.style.width = circle.style.height = `${diameter}px`;
     circle.style.left  = `${event.clientX - rect.left - radius}px`;
     circle.style.top   = `${event.clientY - rect.top - radius}px`;
+    circle.style.pointerEvents = "none";
     circle.className   = "ripple";
 
     // Remove any existing ripple before adding the new one

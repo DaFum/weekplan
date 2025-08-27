@@ -30,6 +30,12 @@ export function getCurrentStreak(tasks) {
     let cursor = new Date();
     cursor.setHours(0, 0, 0, 0);
 
+    // If no tasks completed today, check if yesterday had completed tasks
+    const today = getISODate(cursor);
+    if (!erledigteTage.has(today)) {
+        cursor.setDate(cursor.getDate() - 1);
+    }
+
     while (erledigteTage.has(getISODate(cursor))) {
         streak++;
         cursor.setDate(cursor.getDate() - 1);
@@ -53,11 +59,16 @@ export function getCurrentStreak(tasks) {
 export function saveTask(event) {
     event.preventDefault();
     const taskId = document.getElementById("task-id").value;
-    const kategorie = document.querySelector('input[name="kategorie"]:checked').value;
+    const katEl = document.querySelector('input[name="kategorie"]:checked');
+    const kategorie = katEl?.value;
+    const nameEl = document.getElementById("task-name");
+    const dateEl = document.getElementById("task-date");
+    if (!kategorie || !nameEl?.value || !dateEl?.value) return;
+
     const taskData = {
-        name: document.getElementById("task-name").value,
+        name: nameEl.value,
         kategorie: kategorie,
-        date: document.getElementById("task-date").value,
+        date: dateEl.value,
         durationInMinutes: kategorie === "pc" ? parseInt(document.getElementById("task-duration").value) || 0 : 0
     };
 
@@ -68,12 +79,14 @@ export function saveTask(event) {
             const newTasks = [...tasks];
             newTasks[taskIndex] = { ...tasks[taskIndex], ...taskData };
             updateState({ tasks: newTasks });
+        } else {
+            console.warn(`saveTask: taskId "${taskId}" nicht gefunden.`);
         }
     } else {
         const newId = "task-" + Date.now();
         updateState({ tasks: [...tasks, { ...taskData, id: newId, erledigt: false }] });
 
-        if (Notification.permission === "granted") {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             new Notification(`Neue Aufgabe: ${taskData.name}`, {
                 body: `Am ${formatDisplayDate(new Date(taskData.date))}`,
                 icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png"
