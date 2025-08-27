@@ -56,3 +56,22 @@ export function escapeHTML(str) {
     };
     return s.replace(/[&<>"']/g, ch => map[ch]);
 }
+
+/**
+ * Returns a debounced version of the given function that delays its invocation until after
+ * wait milliseconds have elapsed since the last time it was invoked.
+ * @param {Function} func - The function to debounce.
+ * @param {number} wait - The number of milliseconds to delay.
+ * @returns {Function} The debounced function.
+ */
+export function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        const later = () => {
+            timeout = null;
+            func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
