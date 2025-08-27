@@ -37,9 +37,9 @@ export function initEventListeners() {
         const taskCard = target.closest(".task-card");
         if (taskCard) {
             const taskId = taskCard.dataset.taskId;
-            if (target.closest('.task-card-button[aria-label="Bearbeiten"]')) openModal(taskId);
-            if (target.closest('.task-card-button[aria-label*="erledigt"]')) toggleTask(taskId);
-            if (target.closest('.task-card-button[aria-label="Löschen"]')) deleteTask(taskId);
+            if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
+            if (target.closest('.task-card-button[data-action="toggle-complete"]')) toggleTask(taskId);
+            if (target.closest('.task-card-button[data-action="delete"]')) deleteTask(taskId);
         }
 
         // Handle week navigation
