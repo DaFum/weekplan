@@ -468,7 +468,9 @@ export function renderTaskModal(state, taskId = null) {
         }
     }
 
-    setupRadioStyling();
+    if (document.querySelector('input[name="kategorie"]')) {
+      setupRadioStyling();
+    }
 }
 
 function setupRadioStyling() {
