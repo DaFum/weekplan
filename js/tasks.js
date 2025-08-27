@@ -99,7 +99,8 @@ export function toggleTask(taskId) {
             const wasErledigt = task.erledigt;
             const newErledigt = !wasErledigt;
             if (newErledigt) {
-                sounds.complete.triggerAttackRelease("C4", "0.2");
+                // Guard against uninitialized sounds or complete before calling
+                sounds?.complete?.triggerAttackRelease?.("C4", "0.2");
                 starteKonfetti();
                 addCoins(5);
             }
