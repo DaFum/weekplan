@@ -1,13 +1,25 @@
+// Import necessary functions and data from other modules
 import { getState, updateState } from "./state.js";
 import { addCoins } from "./games.js";
 import { starteKonfetti } from "./effects.js";
 import { closeModal, openPromptModal } from "./events.js";
 import { formatDisplayDate, getISODate, getStartOfWeek } from "./utils.js";
 
+/**
+ * Gets the number of completed tasks for a specific day.
+ * @param {string} isoDate - The ISO date string for the day.
+ * @param {Array} tasks - The array of tasks.
+ * @returns {number} The number of completed tasks for the given day.
+ */
 export function getPunkteFuerTag(isoDate, tasks) {
     return tasks.filter(t => t.date === isoDate && t.erledigt).length;
 }
 
+/**
+ * Calculates the current streak of consecutive days with completed tasks.
+ * @param {Array} tasks - The array of tasks.
+ * @returns {number} The current streak in days.
+ */
 export function getCurrentStreak(tasks) {
     if (!tasks || tasks.length === 0) return 0;
 
@@ -27,16 +39,16 @@ export function getCurrentStreak(tasks) {
 }
 
 /**
- * Speichert ein Task-Formular: erstellt eine neue Aufgabe oder aktualisiert eine bestehende.
+ * Saves a task form: creates a new task or updates an existing one.
  *
- * Liest die Formularfelder (task-id, kategorie, task-name, task-date und task-duration — letzteres nur bei
- * kategorie === 'pc'), baut ein Task-Objekt und schreibt es in den globalen State.
- * - Bei vorhandener task-id: aktualisiert die gefundene Aufgabe (beibehaltende Felder bleiben erhalten).
- * - Ohne task-id: legt eine neue Aufgabe mit id `'task-' + Date.now()` und `erledigt: false` an.
- * Falls Notification-Berechtigung erteilt ist, wird für neu angelegte Aufgaben eine Browser-Notification
- * mit dem formatierten Datum angezeigt. Nach dem Speichern wird die UI neu gerendert und das Modal geschlossen.
+ * Reads the form fields (task-id, kategorie, task-name, task-date, and task-duration - the latter only for
+ * kategorie === 'pc'), builds a task object, and writes it to the global state.
+ * - With a task-id: updates the found task (retaining existing fields).
+ * - Without a task-id: creates a new task with id `'task-' + Date.now()` and `erledigt: false`.
+ * If notification permission is granted, a browser notification with the formatted date is displayed for newly created tasks.
+ * After saving, the UI is re-rendered, and the modal is closed.
  *
- * @param {Event} event - Submit-Event des Formulars (wird preventDefault() aufgerufen).
+ * @param {Event} event - The submit event of the form (preventDefault() is called).
  */
 export function saveTask(event) {
     event.preventDefault();
@@ -72,13 +84,13 @@ export function saveTask(event) {
 }
 
 /**
- * Schaltet den Erledigt-Status einer Aufgabe um.
+ * Toggles the completion status of a task.
  *
- * Wenn die Aufgabe von offen auf erledigt wechselt, werden ein Abschlusssound
- * abgespielt, Konfetti gestartet und 5 Münzen gutgeschrieben. Aktualisiert den
- * globalen State mit der geänderten Aufgabenliste.
+ * If the task changes from open to completed, a completion sound is played,
+ * confetti is started, and 5 coins are credited. Updates the global state
+ * with the modified task list.
  *
- * @param {string} taskId - ID der Aufgabe, deren Status umgeschaltet werden soll.
+ * @param {string} taskId - The ID of the task whose status is to be toggled.
  */
 export function toggleTask(taskId) {
     const { tasks, sounds } = getState();
@@ -99,11 +111,11 @@ export function toggleTask(taskId) {
 }
 
 /**
- * Entfernt eine Aufgabe aus dem Anwendungszustand anhand ihrer ID.
+ * Removes a task from the application state by its ID.
  *
- * Aktualisiert den State, sodass die Aufgabe mit der angegebenen `taskId` aus `tasks` entfernt wird.
+ * Updates the state so that the task with the specified `taskId` is removed from `tasks`.
  *
- * @param {string} taskId - ID der zu löschenden Aufgabe.
+ * @param {string} taskId - The ID of the task to be deleted.
  */
 export function deleteTask(taskId) {
     const { tasks } = getState();
@@ -111,11 +123,11 @@ export function deleteTask(taskId) {
 }
 
 /**
- * Entfernt im Zustand gespeicherte Aufgaben, deren Datum vor Beginn der aktuellen Woche liegt.
+ * Removes tasks stored in the state whose date is before the start of the current week.
  *
- * Berechnet den ISO-Datumstring für den Beginn der aktuellen Woche und aktualisiert den globalen
- * State so, dass nur Aufgaben mit einem gesetzten `date`-Feld und einem Datum größer-gleich diesem
- * Beginn erhalten bleiben. Aufgaben ohne `date` werden ebenfalls entfernt.
+ * Calculates the ISO date string for the start of the current week and updates the global
+ * state so that only tasks with a set `date` field and a date greater than or equal to this
+ * start date are retained. Tasks without a `date` are also removed.
  */
 export function cleanupOldTasks() {
     const { tasks } = getState();
@@ -124,11 +136,11 @@ export function cleanupOldTasks() {
 }
 
 /**
- * Öffnet ein Modal, um das PC-Zeitlimit (in Stunden) für die Woche festzulegen.
+ * Opens a modal to set the PC time limit (in hours) for the week.
  *
- * Ruft `openPromptModal` auf, um den Benutzer nach der Anzahl der Stunden zu fragen.
- * Der aktuelle Wert wird aus dem State (`pcStundenGesamt`) gelesen. Nach der Eingabe
- * wird der State mit dem neuen Wert aktualisiert.
+ * Calls `openPromptModal` to ask the user for the number of hours.
+ * The current value is read from the state (`pcStundenGesamt`). After input,
+ * the state is updated with the new value.
  */
 export function setPcTimeLimit() {
     const { pcStundenGesamt } = getState();
@@ -143,11 +155,11 @@ export function setPcTimeLimit() {
 }
 
 /**
- * Öffnet ein Modal, um das Wochenziel (Anzahl der Aufgaben) festzulegen.
+ * Opens a modal to set the weekly goal (number of tasks).
  *
- * Ruft `openPromptModal` auf, um den Benutzer nach der Anzahl der zu erledigenden
- * Aufgaben zu fragen. Der aktuelle Wert wird aus dem State (`wochenZiel`) gelesen.
- * Nach der Eingabe wird der State mit dem neuen Wert aktualisiert.
+ * Calls `openPromptModal` to ask the user for the number of tasks to be completed.
+ * The current value is read from the state (`wochenZiel`). After input,
+ * the state is updated with the new value.
  */
 export function setWeeklyGoal() {
     const { wochenZiel } = getState();

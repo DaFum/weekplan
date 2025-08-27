@@ -1,3 +1,4 @@
+// Import necessary functions, data, and libraries
 import { getState, updateState } from "./state.js";
 import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes, addDays } from "./utils.js";
 import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
@@ -5,10 +6,11 @@ import { updateMetaBar } from "./theme.js";
 import { getPunkteFuerTag, getCurrentStreak } from "./tasks.js";
 import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
 
+// Cache for the last rendered tasks to optimize UI updates
 let lastRenderedTasks = [];
 
 /**
- * Führt alle initialen Render-Vorgänge aus.
+ * Executes all initial rendering operations.
  */
 export function renderAllUI() {
     const state = getState();
@@ -20,6 +22,10 @@ export function renderAllUI() {
     updateCoinsDisplay(state);
 }
 
+/**
+ * Updates the points display for each day card.
+ * @param {Object} state - The application state.
+ */
 export function updatePunkteAnzeige(state) {
     document.querySelectorAll(".tag-karte").forEach(card => {
         const anzeige = card.querySelector(".day-score");
@@ -27,6 +33,10 @@ export function updatePunkteAnzeige(state) {
     });
 }
 
+/**
+ * Updates all trackers in the UI.
+ * @param {Object} state - The application state.
+ */
 function updateAllTrackers(state) {
     updateTimeTracker(state);
     updateWeeklyGoalTracker(state);
@@ -35,6 +45,9 @@ function updateAllTrackers(state) {
     updateMetaBar(state);
 }
 
+/**
+ * Renders the structure of the time tracker.
+ */
 function renderTimeTrackerStructure() {
     const container = document.getElementById("pc-time-tracker");
     if (!container) return;
@@ -60,6 +73,10 @@ function renderTimeTrackerStructure() {
         </div>`;
 }
 
+/**
+ * Updates the time tracker with the current data.
+ * @param {Object} state - The application state.
+ */
 export function updateTimeTracker(state) {
     const { tasks, pcStundenGesamt } = state;
     const startOfWeek = getStartOfWeek(new Date());
@@ -77,6 +94,9 @@ export function updateTimeTracker(state) {
     document.getElementById("pc-time-remaining").textContent = formatMinutes(remainingMinutes);
 }
 
+/**
+ * Renders the structure of the weekly goal tracker.
+ */
 function renderWeeklyGoalTrackerStructure() {
     const container = document.getElementById("weekly-goal-tracker");
     if (!container) return;
@@ -93,6 +113,10 @@ function renderWeeklyGoalTrackerStructure() {
         </div>`;
 }
 
+/**
+ * Updates the weekly goal tracker with the current data.
+ * @param {Object} state - The application state.
+ */
 export function updateWeeklyGoalTracker(state) {
     const { tasks, wochenZiel } = state;
     const startOfWeek = getStartOfWeek(new Date());
@@ -104,6 +128,9 @@ export function updateWeeklyGoalTracker(state) {
     document.getElementById("weekly-goal-progress-bar").style.width = `${progress}%`;
 }
 
+/**
+ * Renders the structure of the streak tracker.
+ */
 function renderStreakTrackerStructure() {
     const container = document.getElementById("streak-tracker");
     if (!container) return;
@@ -113,10 +140,18 @@ function renderStreakTrackerStructure() {
         <div class="text-sm text-secondary">Tage in Folge</div>`;
 }
 
+/**
+ * Updates the streak tracker with the current data.
+ * @param {Object} state - The application state.
+ */
 export function updateStreakTracker(state) {
     document.getElementById("streak-value").textContent = getCurrentStreak(state.tasks);
 }
 
+/**
+ * Renders the main plan view, including week navigation and day cards.
+ * @param {Object} state - The application state.
+ */
 export function renderPlan(state) {
     const { aktiveWoche } = state;
     const wochenContainer = document.getElementById("wochen-container");
@@ -169,6 +204,10 @@ export function renderPlan(state) {
     initSortable();
 }
 
+/**
+ * Shows a specific week in the plan view.
+ * @param {number} index - The index of the week to show.
+ */
 export function showWoche(index) {
     updateState({ aktiveWoche: index });
     document.querySelectorAll(".wochen-ansicht").forEach(el => el.classList.add("hidden"));
@@ -182,6 +221,10 @@ export function showWoche(index) {
     });
 }
 
+/**
+ * Renders all tasks for all days.
+ * @param {Array} tasks - The array of tasks.
+ */
 function renderAllTasks(tasks) {
     lastRenderedTasks = tasks;
     document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
@@ -196,6 +239,10 @@ function renderAllTasks(tasks) {
     });
 }
 
+/**
+ * Updates the tasks UI based on the changes in the state.
+ * @param {Object} state - The application state.
+ */
 export function updateTasksUI(state) {
     const newTasks = state.tasks;
     const addedTasks = newTasks.filter(newTask => !lastRenderedTasks.some(oldTask => oldTask.id === newTask.id));
@@ -213,6 +260,10 @@ export function updateTasksUI(state) {
     updateAllTrackers(state);
 }
 
+/**
+ * Adds a task to the DOM.
+ * @param {Object} task - The task object to add.
+ */
 function addTaskToDOM(task) {
     const list = document.getElementById(`aufgaben-liste-${task.date}`);
     if (!list) return;
@@ -223,6 +274,10 @@ function addTaskToDOM(task) {
     list.appendChild(createTaskElement(task));
 }
 
+/**
+ * Removes a task from the DOM.
+ * @param {string} taskId - The ID of the task to remove.
+ */
 function removeTaskFromDOM(taskId) {
     const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
     if (taskElement) {
@@ -234,6 +289,10 @@ function removeTaskFromDOM(taskId) {
     }
 }
 
+/**
+ * Updates a task in the DOM.
+ * @param {Object} task - The task object to update.
+ */
 function updateTaskInDOM(task) {
     const taskElement = document.querySelector(`[data-task-id="${task.id}"]`);
     if (taskElement) {
@@ -241,6 +300,10 @@ function updateTaskInDOM(task) {
     }
 }
 
+/**
+ * Creates the HTML for an empty state message.
+ * @returns {string} The HTML string for the empty state.
+ */
 function createEmptyState() {
     return `<div class="empty-tasks">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="empty-tasks-icon">
@@ -251,6 +314,9 @@ function createEmptyState() {
             </div>`;
 }
 
+/**
+ * Initializes the sortable functionality for task lists.
+ */
 function initSortable() {
     document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
         if (list.dataset.sortableInit === "1") return;
@@ -275,6 +341,11 @@ function initSortable() {
     });
 }
 
+/**
+ * Creates a task element for the DOM.
+ * @param {Object} task - The task object.
+ * @returns {HTMLElement} The created task element.
+ */
 function createTaskElement(task) {
     const details = kategorieDetails[task.kategorie] || {
         icon: "📝",
@@ -317,11 +388,14 @@ function createTaskElement(task) {
             </button>
         </div>
     `;
-    // sichere Textzuweisung
+    // Securely set the task name
     element.querySelector(".task-name").textContent = String(task.name ?? "");
     return element;
 }
 
+/**
+ * Scrolls the view to the current day.
+ */
 export function scrollToCurrentDay() {
     const todayEl = document.querySelector(".today-card");
     if (todayEl) {
@@ -332,16 +406,28 @@ export function scrollToCurrentDay() {
     }
 }
 
+/**
+ * Updates the coins display.
+ * @param {Object} state - The application state.
+ */
 export function updateCoinsDisplay(state) {
     const el = document.getElementById("coins-count");
     if (el) el.textContent = state.coins;
 }
 
+/**
+ * Updates the motivational quote.
+ */
 export const updateMotivationsspruch = () => {
     const el = document.getElementById("motivations-spruch");
     if (el) el.textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
 }
 
+/**
+ * Renders the task modal.
+ * @param {Object} state - The application state.
+ * @param {string|null} taskId - The ID of the task to edit, or null for a new task.
+ */
 export function renderTaskModal(state, taskId = null) {
     const { tasks } = state;
     const form = document.getElementById("task-form");
@@ -405,6 +491,9 @@ export function renderTaskModal(state, taskId = null) {
     }
 }
 
+/**
+ * Sets up the styling for the category radio buttons.
+ */
 function setupRadioStyling() {
     const radios = document.querySelectorAll('input[name="kategorie"]');
     const durationContainer = document.getElementById("pc-duration-container");

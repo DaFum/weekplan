@@ -1,3 +1,4 @@
+// Import modules
 import { initEventListeners } from "./events.js";
 import { loadData, saveData } from "./storage.js";
 import { cleanupOldTasks } from "./tasks.js";
@@ -8,32 +9,43 @@ import { updateState, subscribe } from "./state.js";
 import { initSounds } from "./audio.js";
 import { debounce } from "./utils.js";
 
+/**
+ * Main entry point of the application.
+ * This function is executed when the DOM is fully loaded.
+ */
 document.addEventListener("DOMContentLoaded", () => {
+    // Load saved data from storage
     const savedData = loadData();
+    // Determine the theme based on saved data or system preference
     const theme = savedData.theme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 
+    // Update the application state with loaded data and theme
     updateState({
         ...savedData,
         theme,
         aktiveWoche: 0
     });
 
-    updateTheme(theme); // Apply theme immediately
+    // Apply the determined theme immediately
+    updateTheme(theme);
 
+    // Initialize various parts of the application
     initEventListeners();
     initSounds();
     cleanupOldTasks();
 
-    // Initial render
+    // Perform the initial render of the UI
     renderAllUI();
     updateMotivationsspruch();
     scrollToCurrentDay();
 
+    // Initialize games
     initGames();
 
-    // Subscribe to state changes for persistence and specific UI updates
+    // Create a debounced version of the saveData function for performance
     const debouncedSaveData = debounce(saveData, 300);
 
+    // Subscribe to state changes for persistence and specific UI updates
     subscribe("theme", state => {
         updateTheme(state.theme);
         saveData(state);
@@ -61,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
         saveData(state);
     });
 
-
+    // Request notification permission if not already asked
     if (!localStorage.getItem("notifsAsked") && "Notification" in window) {
         Notification.requestPermission().then(() => localStorage.setItem("notifsAsked", 1));
     }

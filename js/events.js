@@ -1,3 +1,4 @@
+// Import necessary functions from other modules
 import { toggleTheme } from "./theme.js";
 import { showWoche, renderTaskModal } from "./ui.js";
 import { createRipple } from "./effects.js";
@@ -6,32 +7,33 @@ import { getState, updateState } from "./state.js";
 import { openGame, closeGame, checkQuizAnswer } from "./games.js";
 
 /**
- * Initialisiert zentrale Event-Handler für die Benutzeroberfläche.
+ * Initializes central event handlers for the user interface.
  */
 export function initEventListeners() {
+    // Add a single click event listener to the body for event delegation
     document.body.addEventListener("click", function(event) {
         const target = event.target;
 
-        // Modals
+        // Handle modal interactions
         if (target.closest("#open-task-modal")) openModal();
         if (target.closest("#close-task-modal")) closeModal();
         if (target.closest("#cancel-task-modal")) closeModal();
         if (target.closest("#close-prompt-modal")) closePromptModal();
         if (target.closest("#cancel-prompt-modal")) closePromptModal();
 
-        // Games
+        // Handle game interactions
         if (target.closest("#open-memory-game")) openGame("memory");
         if (target.closest("#open-quiz-game")) openGame("quiz");
         if (target.closest(".close-game-btn")) closeGame();
 
-        // Settings
+        // Handle settings interactions
         if (target.closest("#pc-time-settings-btn")) setPcTimeLimit();
         if (target.closest("#weekly-goal-settings-btn")) setWeeklyGoal();
 
-        // Theme
+        // Handle theme toggling
         if (target.closest("#theme-toggle")) toggleTheme();
 
-        // Dynamic elements
+        // Handle dynamically created elements
         const taskCard = target.closest(".task-card");
         if (taskCard) {
             const taskId = taskCard.dataset.taskId;
@@ -40,20 +42,24 @@ export function initEventListeners() {
             if (target.closest('.task-card-button[aria-label="Löschen"]')) deleteTask(taskId);
         }
 
+        // Handle week navigation
         const navButton = target.closest(".nav-button");
         if (navButton) {
             showWoche(parseInt(navButton.dataset.weekIndex));
         }
 
+        // Handle quiz answer selection
         const quizOption = target.closest(".quiz-option");
         if (quizOption) {
             checkQuizAnswer(parseInt(quizOption.dataset.index));
         }
 
+        // Apply ripple effect to buttons
         const btn = event.target.closest("button");
         if (btn) createRipple(btn, event);
     });
 
+    // Add submit event listener to the task form
     const taskForm = document.getElementById("task-form");
     if (taskForm) {
         taskForm.addEventListener("submit", (event) => {
@@ -62,6 +68,7 @@ export function initEventListeners() {
         });
     }
 
+    // Add submit event listener to the prompt form
     const promptForm = document.getElementById("prompt-form");
     if (promptForm) {
         promptForm.addEventListener("submit", (event) => {
@@ -77,8 +84,8 @@ export function initEventListeners() {
 }
 
 /**
- * Öffnet das Aufgaben-Modal und rendert seinen Inhalt.
- * @param {string|null} taskId - Optional: ID der zu bearbeitenden Aufgabe.
+ * Opens the task modal and renders its content.
+ * @param {string|null} taskId - Optional: The ID of the task to be edited.
  */
 export function openModal(taskId = null) {
     renderTaskModal(getState(), taskId);
@@ -87,7 +94,7 @@ export function openModal(taskId = null) {
 }
 
 /**
- * Schließt das Task-Modal.
+ * Closes the task modal.
  */
 export function closeModal() {
     document.getElementById("task-modal").classList.add("hidden");
@@ -95,7 +102,11 @@ export function closeModal() {
 }
 
 /**
- * Öffnet ein numerisches Prompt-Modal.
+ * Opens a numeric prompt modal.
+ * @param {string} title - The title of the modal.
+ * @param {string} label - The label for the input field.
+ * @param {number} initialValue - The initial value for the input field.
+ * @param {function} callback - The function to call when the form is submitted.
  */
 export function openPromptModal(title, label, initialValue, callback) {
     updateState({ promptCallback: callback });
@@ -110,12 +121,12 @@ export function openPromptModal(title, label, initialValue, callback) {
 }
 
 /**
- * Schließt das Prompt-Modal.
+ * Closes the prompt modal.
  */
 export function closePromptModal() {
     document.getElementById("prompt-modal").classList.add("hidden");
     if (!document.getElementById("task-modal").classList.contains("hidden")) {
-        // do nothing, task modal is open
+        // Do nothing if the task modal is open
     } else {
         document.body.classList.remove("modal-open");
     }

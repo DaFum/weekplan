@@ -1,13 +1,14 @@
+// The initial state of the application
 let state = {
-    tasks: [],
-    aktiveWoche: 0,
-    pcStundenGesamt: 0,
-    wochenZiel: 10,
-    sounds: {},
-    promptCallback: null,
-    coins: 0,
-    currentGame: null,
-    theme: "light",
+    tasks: [], // Array of tasks
+    aktiveWoche: 0, // The currently active week
+    pcStundenGesamt: 0, // Total PC hours
+    wochenZiel: 10, // Weekly goal
+    sounds: {}, // Sound objects
+    promptCallback: null, // Callback for the prompt modal
+    coins: 0, // Number of coins
+    currentGame: null, // The currently active game
+    theme: "light", // The current theme
 
     // Game state
     memory: {
@@ -24,18 +25,21 @@ let state = {
     }
 };
 
+// Array to store listeners for state changes
 const listeners = [];
 let nextListenerId = 0;
 
+/**
+ * Returns a copy of the current state.
+ * @returns {Object} The current state.
+ */
 export function getState() {
     return { ...state };
 }
 
 /**
- * Aktualisiert den internen Zustand und benachrichtigt gezielt die Abonnenten, deren
- * abonnierte State-Teile sich geändert haben.
- *
- * @param {Object} newState - Ein Objekt mit den zu aktualisierenden Schlüsseln.
+ * Updates the internal state and notifies subscribers whose subscribed state parts have changed.
+ * @param {Object} newState - An object with the keys to be updated.
  */
 export function updateState(newState) {
     const oldState = { ...state };
@@ -44,11 +48,10 @@ export function updateState(newState) {
 }
 
 /**
- * Registriert einen Listener für Änderungen an einem bestimmten Teil des States.
- *
- * @param {string|null} key - Der Schlüssel im State, auf den gehört werden soll. Wenn null, wird der Listener bei jeder Änderung aufgerufen.
- * @param {function(Object):void} callback - Die Funktion, die bei Änderungen aufgerufen wird.
- * @returns {function():void} Eine Funktion, um das Abonnement zu beenden.
+ * Registers a listener for changes to a specific part of the state.
+ * @param {string|null} key - The key in the state to listen to. If null, the listener is called on any change.
+ * @param {function(Object):void} callback - The function to be called on change.
+ * @returns {function():void} A function to unsubscribe.
  */
 export function subscribe(key, callback) {
     const id = nextListenerId++;
@@ -62,22 +65,23 @@ export function subscribe(key, callback) {
 }
 
 /**
- * Benachrichtigt die Listener, deren abonnierte Daten sich geändert haben.
- *
- * @param {Object} newState - Das Objekt mit den neuen State-Werten.
+ * Notifies listeners whose subscribed data has changed.
+ * @param {Object} newState - The object with the new state values.
+ * @param {Object} oldState - The object with the old state values.
  */
 function notifyListeners(newState, oldState) {
+    // Determine which keys have changed
     const changedKeys = Object.keys(newState).filter(key => JSON.stringify(newState[key]) !== JSON.stringify(oldState[key]));
 
     if (changedKeys.length === 0) return;
 
     listeners.forEach(({ key, callback }) => {
-        // Globale Listener (key === null) oder Listener für geänderte Schlüssel benachrichtigen
+        // Notify global listeners (key === null) or listeners for changed keys
         if (key === null || changedKeys.includes(key)) {
             try {
                 callback(state);
             } catch (e) {
-                console.error(`Fehler im Listener für key "${key}":`, e);
+                console.error(`Error in listener for key "${key}":`, e);
             }
         }
     });
