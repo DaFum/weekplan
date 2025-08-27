@@ -413,48 +413,59 @@ export function getCurrentStreak(tasks) {
 export function renderTaskModal(state, taskId = null) {
     const { tasks } = state;
     const form = document.getElementById("task-form");
-    form.reset();
+    if (form) form.reset();
+
     const title = document.getElementById("modal-title");
     const idInput = document.getElementById("task-id");
+    const nameInput = document.getElementById("task-name");
+    const durationInput = document.getElementById("task-duration");
+    const taskDateSelect = document.getElementById("task-date");
 
-    if (taskId) {
-        const task = tasks.find(t => t.id === taskId);
-        title.textContent = "Aufgabe bearbeiten";
-        idInput.value = task.id;
-        document.getElementById("task-name").value = task.name;
-        document.querySelector(`input[name="kategorie"][value="${task.kategorie}"]`).checked = true;
-        if (task.kategorie === "pc") {
-            document.getElementById("task-duration").value = task.durationInMinutes;
+    const taskToEdit = taskId ? tasks.find(t => t && t.id === taskId) : null;
+
+    if (taskToEdit) {
+        if (title) title.textContent = "Aufgabe bearbeiten";
+        if (idInput) idInput.value = taskToEdit.id;
+        if (nameInput) nameInput.value = taskToEdit.name;
+
+        if (taskToEdit.kategorie) {
+            const radio = document.querySelector(`input[name="kategorie"][value="${taskToEdit.kategorie}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        if (taskToEdit.kategorie === "pc" && durationInput) {
+            durationInput.value = taskToEdit.durationInMinutes;
         }
     } else {
-        title.textContent = "Neue Aufgabe erstellen";
-        idInput.value = "";
+        if (title) title.textContent = "Neue Aufgabe erstellen";
+        if (idInput) idInput.value = "";
     }
 
-    const taskDateSelect = document.getElementById("task-date");
-    taskDateSelect.innerHTML = "";
-    const startOfWeek = getStartOfWeek(new Date());
-    const todayISO = getISODate(new Date());
-    for (let week = 0; week < 4; week++) {
-        const optgroup = document.createElement("optgroup");
-        optgroup.label = `Woche ${week + 1}`;
-        for (let day = 0; day < 7; day++) {
-            const currentDate = new Date(startOfWeek); currentDate.setDate(currentDate.getDate() + week * 7 + day);
-            const isoDate = getISODate(currentDate);
-            const option = document.createElement("option");
-            option.value = isoDate;
-            option.textContent = formatDisplayDate(currentDate);
-            if (taskId) {
-                const taskToEdit = tasks.find(t => t.id === taskId);
+    if (taskDateSelect) {
+        taskDateSelect.innerHTML = "";
+        const startOfWeek = getStartOfWeek(new Date());
+        const todayISO = getISODate(new Date());
+
+        for (let week = 0; week < 4; week++) {
+            const optgroup = document.createElement("optgroup");
+            optgroup.label = `Woche ${week + 1}`;
+            for (let day = 0; day < 7; day++) {
+                const currentDate = new Date(startOfWeek);
+                currentDate.setDate(currentDate.getDate() + week * 7 + day);
+                const isoDate = getISODate(currentDate);
+                const option = document.createElement("option");
+                option.value = isoDate;
+                option.textContent = formatDisplayDate(currentDate);
+
                 if (taskToEdit) {
                     option.selected = (isoDate === taskToEdit.date);
+                } else {
+                    option.selected = (isoDate === todayISO);
                 }
-            } else {
-                option.selected = (isoDate === todayISO);
+                optgroup.appendChild(option);
             }
-            optgroup.appendChild(option);
+            taskDateSelect.appendChild(optgroup);
         }
-        taskDateSelect.appendChild(optgroup);
     }
 
     setupRadioStyling();
