@@ -443,8 +443,9 @@ export function renderTaskModal(state, taskId = null) {
 
     if (taskDateSelect) {
         taskDateSelect.innerHTML = "";
-        const startOfWeek = getStartOfWeek(new Date());
-        const todayISO = getISODate(new Date());
+        const now = new Date();
+        const startOfWeek = getStartOfWeek(now);
+        const todayISO = getISODate(now);
 
         for (let week = 0; week < 4; week++) {
             const optgroup = document.createElement("optgroup");
