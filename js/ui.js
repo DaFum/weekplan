@@ -23,7 +23,7 @@ export function renderAllUI() {
 export function updatePunkteAnzeige(state) {
     document.querySelectorAll(".tag-karte").forEach(card => {
         const anzeige = card.querySelector(".day-score");
-        if (anzeige) anzeige.innerHTML = `<span class="text-yellow-500">⭐</span> ${getPunkteFuerTag(card.id, state.tasks)}`;
+        if (anzeige) anzeige.lastChild.textContent = ` ${getPunkteFuerTag(card.id, state.tasks)}`;
     });
 }
 
