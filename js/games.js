@@ -76,6 +76,12 @@ export function closeGame() {
  * Initializes the memory game by shuffling cards and resetting the game state.
  */
 function initMemoryGame() {
+    // Clear any pending match‐check timeout from a previous game
+    const { memory: prevMemory } = getState();
+    if (prevMemory?.checkMatchTimeoutId) {
+        clearTimeout(prevMemory.checkMatchTimeoutId);
+    }
+
     const symbols = ["🎮", "🎯", "🏆", "⭐", "🚀", "🌈"];
     const cards = shuffleArray([...symbols, ...symbols]);
     updateState({
@@ -84,9 +90,11 @@ function initMemoryGame() {
             flippedCards: [],
             matchedPairs: 0,
             score: 0,
-            matchedSymbols: []
+            matchedSymbols: [],
+            checkMatchTimeoutId: null
         }
     });
+
     renderMemoryBoard();
 }
 
