@@ -289,9 +289,10 @@ function renderQuiz(selectedIndex = null) {
     if (!quiz.questions || quiz.questions.length === 0) return;
 
     const question = quiz.questions[quiz.currentQuestion];
-    document.getElementById("quiz-question").textContent = question.question;
-
+    const questionEl = document.getElementById("quiz-question");
     const optionsContainer = document.getElementById("quiz-options");
+    if (!questionEl || !optionsContainer) return;
+    questionEl.textContent = question.question;
     optionsContainer.innerHTML = "";
 
     question.options.forEach((option, index) => {
@@ -316,10 +317,10 @@ function renderQuiz(selectedIndex = null) {
 
     // Update score, progress, and progress bar
     const totalQuestions = quiz.questions.length;
-    document.getElementById("quiz-score").textContent = quiz.score;
-    document.getElementById("quiz-progress").textContent = `${quiz.currentQuestion + 1}/${totalQuestions}`;
-    document.getElementById("quiz-progress-bar").style.width = `${((quiz.currentQuestion + 1) / totalQuestions) * 100}%`;
+    document.getElementById("quiz-score")?.textContent = quiz.score;
+    document.getElementById("quiz-progress")?.textContent = `${quiz.currentQuestion + 1}/${totalQuestions}`;
+    document.getElementById("quiz-progress-bar")?.style.width = `${((quiz.currentQuestion + 1) / totalQuestions) * 100}%`;
 
     // Show/hide the "Next Question" button
-    document.getElementById("quiz-next").classList.toggle("hidden", !quiz.showResult);
+    document.getElementById("quiz-next")?.classList.toggle("hidden", !quiz.showResult);
 }
