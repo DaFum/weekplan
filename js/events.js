@@ -89,9 +89,19 @@ export function initEventListeners() {
     if (promptForm) {
         promptForm.addEventListener("submit", (event) => {
             event.preventDefault();
+
             const { promptCallback } = getState();
-            const raw = document.getElementById("prompt-modal-input").value;
+
+            // Guard against missing or non-input element
+            const inputEl = document.getElementById("prompt-modal-input");
+            if (!(inputEl instanceof HTMLInputElement)) {
+                closePromptModal();
+                return;
+            }
+
+            const raw = inputEl.value;
             const num = raw === "" ? NaN : Number(raw);
+
             if (typeof promptCallback === "function" && Number.isFinite(num) && num >= 0) {
                 promptCallback(num);
                 closePromptModal();
