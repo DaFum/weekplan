@@ -117,9 +117,15 @@ function openModal(taskId = null) {
 /**
  * Closes the task modal.
  */
-function closeModal() {
+export function closeModal() {
     document.getElementById("task-modal")?.classList.add("hidden");
-    document.body.classList.remove("modal-open");
+    const hasOtherOpen =
+        !document.getElementById("prompt-modal")?.classList.contains("hidden") ||
+        !document.getElementById("memory-game-modal")?.classList.contains("hidden") ||
+        !document.getElementById("quiz-game-modal")?.classList.contains("hidden");
+    if (!hasOtherOpen) {
+        document.body.classList.remove("modal-open");
+    }
 }
 
 /**
