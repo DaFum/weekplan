@@ -46,9 +46,9 @@ export const addDays = (date, days) => {
  * @returns {string} The formatted time string.
  */
 export const formatMinutes = (minutes) => {
-    if (minutes < 0) minutes = 0;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
+    const positiveMinutes = Math.max(0, minutes);
+    const h = Math.floor(positiveMinutes / 60);
+    const m = positiveMinutes % 60;
     return `${h} Std ${m} Min`;
 };
 
