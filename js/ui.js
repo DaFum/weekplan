@@ -559,16 +559,20 @@ function setupRadioStyling() {
     const durationContainer = document.getElementById("pc-duration-container");
     const update = () => {
         const selected = document.querySelector('input[name="kategorie"]:checked')?.value;
-        durationContainer.classList.toggle("hidden", selected !== "pc");
+        if (durationContainer) {
+            durationContainer.classList.toggle("hidden", selected !== "pc");
+        }
         radios.forEach(r => {
             const d = r.nextElementSibling;
             const isActive = r.checked;
-            d.classList.toggle("active", isActive);
-            d.classList.toggle("bg-indigo-600", isActive);
-            d.classList.toggle("border-indigo-500", isActive);
-            d.classList.toggle("text-white", isActive);
-            d.classList.toggle("font-bold", isActive);
-            d.classList.toggle("border-border-color", !isActive);
+            if (d) {
+                d.classList.toggle("active", isActive);
+                d.classList.toggle("bg-indigo-600", isActive);
+                d.classList.toggle("border-indigo-500", isActive);
+                d.classList.toggle("text-white", isActive);
+                d.classList.toggle("font-bold", isActive);
+                d.classList.toggle("border-border-color", !isActive);
+            }
         });
     };
     radios.forEach(radio => radio.addEventListener("change", update));
