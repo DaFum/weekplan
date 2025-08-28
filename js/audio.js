@@ -24,24 +24,17 @@ export async function initSounds() {
         );
 
         const Tone = await Promise.race([importPromise, timeoutPromise]);
-        try {
-            // Create the synthesizers
-            const sounds = {
-                complete: new Tone.default.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination(),
-                confetti: new Tone.default.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } }).toDestination(),
-                coin: new Tone.default.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination()
-            };
-            // Update the application state with the created sounds
-            updateState({ sounds });
-        } catch (synthError) {
-            // Log an error if creating the synthesizers fails
-            console.error("Error creating audio synthesizers:", synthError);
-            // Update the state with an empty sounds object
-            updateState({ sounds: {} });
-        }
+        // Create the synthesizers
+        const sounds = {
+            complete: new Tone.default.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination(),
+            confetti: new Tone.default.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } }).toDestination(),
+            coin: new Tone.default.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination()
+        };
+        // Update the application state with the created sounds
+        updateState({ sounds });
     } catch (error) {
-        // Log an error if Tone.js could not be loaded
-        console.error("Tone.js could not be loaded. Audio functions are disabled.", error);
+        // Log an error if Tone.js could not be loaded or synthesizer creation failed
+        console.error("Tone.js could not be loaded or audio synthesizers could not be created. Audio functions are disabled.", error);
         updateState({ sounds: {} });
     }
 }
