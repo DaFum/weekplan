@@ -131,8 +131,10 @@ function closeModal() {
  */
 export function openPromptModal(title, label, initialValue, callback) {
     updateState({ promptCallback: callback });
-    document.getElementById("prompt-modal-title")?.textContent = title;
-    document.getElementById("prompt-modal-label")?.textContent = label;
+    const titleEl = document.getElementById("prompt-modal-title");
+    const labelEl = document.getElementById("prompt-modal-label");
+    if (titleEl) titleEl.textContent = title;
+    if (labelEl) labelEl.textContent = label;
     const input = document.getElementById("prompt-modal-input");
     if (input) {
         input.value = initialValue;
