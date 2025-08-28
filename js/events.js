@@ -13,7 +13,7 @@ export function initEventListeners() {
     // Start audio context on the first user gesture to comply with autoplay policies
     const startAudio = async () => {
         // Tone.js is loaded dynamically, so we access it via window
-        if (window.Tone && window.Tone.context.state !== "running") {
+        if (window.Tone && window.Tone.context && window.Tone.context.state !== "running") {
             try {
                 await window.Tone.start();
                 console.log("AudioContext started successfully.");

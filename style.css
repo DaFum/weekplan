@@ -713,10 +713,17 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  .konfetti, .task-card, .ripple, .level-up, .coin, .minigame-modal, .modal-content, .pulse {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+
+  .progress-ring circle, .game-card, .nav-button, .task-card-button, .progress-bar, .task-card, .form-input, .btn {
+      transition-duration: 0.001ms !important;
+  }
+
+  * {
     scroll-behavior: auto !important;
   }
 }

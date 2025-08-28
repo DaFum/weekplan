@@ -17,7 +17,7 @@ let lastKonfettiCleanup = null;
  * @param {HTMLElement} container - The container element for the confetti. Defaults to document.body.
  * @returns {function} A cleanup function to remove the confetti.
  */
-export function starteKonfetti(container = document.body) {
+export function starteKonfetti(container = document.getElementById('konfetti-container') || document.body) {
     // Clean up previous confetti if it exists
     if (lastKonfettiCleanup) {
         lastKonfettiCleanup();

@@ -115,6 +115,9 @@ function initMemoryGame() {
 function flipCard(index) {
     const { memory } = getState();
     const { flippedCards, matchedSymbols, cards } = memory;
+    if (!Array.isArray(cards) || !Number.isInteger(Number(index)) || index < 0 || index >= cards.length) {
+        return;
+    }
     const symbol = cards[index];
 
     // Prevent flipping more than two cards, or flipping an already flipped or matched card
@@ -129,7 +132,7 @@ function flipCard(index) {
     // If two cards are flipped, check for a match
     if (newFlippedCards.length === 2) {
         const { memory } = getState();
-        if (memory.checkMatchTimeoutId) clearTimeout(memory.checkMatchTimeoutId);
+        if (memory?.checkMatchTimeoutId) clearTimeout(memory.checkMatchTimeoutId);
 
         const timeoutId = setTimeout(() => {
             checkMatch();
@@ -159,7 +162,7 @@ function checkMatch() {
         if (matchedPairs === cards.length / 2) {
             // If all pairs are matched, award bonus coins and play a sound
             addCoins(20);
-            sounds.confetti?.triggerAttackRelease("C5", "0.5");
+            sounds?.confetti?.triggerAttackRelease("C5", "0.5");
         }
         updateState({
             memory: { ...memory, matchedPairs, score, flippedCards: [], matchedSymbols: newMatchedSymbols }
@@ -254,7 +257,7 @@ export function checkQuizAnswer(selectedIndex) {
     const isCorrect = selectedIndex === question.answer;
 
     if (isCorrect) {
-        sounds.complete?.triggerAttackRelease("C5", "0.2");
+        sounds?.complete?.triggerAttackRelease("C5", "0.2");
     }
 
     updateState({
