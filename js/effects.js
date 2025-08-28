@@ -29,7 +29,7 @@ export function starteKonfetti(container = document.body) {
 
     for (let i = 0; i < KONFETTI_COUNT; i++) {
         const konfetti = document.createElement("div");
-        konfetti.className = "konfetti"; // CSS class for styling and animation
+        konfetti.className = "konfetti-stueck"; // einzelnes Konfetti-Stück
         konfetti.style.position = "absolute";
         konfetti.style.left = `${Math.random() * KONFETTI_POSITION_PERCENT_RANGE}%`;
         konfetti.style.top = `${Math.random() * KONFETTI_POSITION_PERCENT_RANGE - KONFETTI_TOP_OFFSET_PERCENT}%`;
