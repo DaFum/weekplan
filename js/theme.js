@@ -56,9 +56,13 @@ export function updateMetaBar(state) {
     const { tasks, wochenZiel } = state;
     const start = getStartOfWeek(new Date());
     const end = new Date(start); end.setDate(end.getDate() + 7);
-    const done = tasks.filter(t => t.erledigt && t.date >= getISODate(start) && t.date < getISODate(end)).length;
+    const done = tasks.filter(t =>
+        t && t.erledigt && t.date &&
+        t.date >= getISODate(start) && t.date < getISODate(end)
+    ).length;
     const percent = wochenZiel > 0
       ? Math.max(0, Math.min(100, Math.round((done / wochenZiel) * 100)))
+      : 0;
       : 0;
     document.title = `${percent}% · Wochen-Power`;
     const meta = document.getElementById("themeMeta");
