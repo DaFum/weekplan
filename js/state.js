@@ -36,7 +36,9 @@ let nextListenerId = 0;
  * @returns {Object} The current state.
  */
 export function getState() {
-    return { ...state };
+    return typeof structuredClone === 'function'
+        ? structuredClone(state)
+        : JSON.parse(JSON.stringify(state));
 }
 
 /**
