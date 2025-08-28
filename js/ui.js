@@ -4,10 +4,19 @@ import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes, addDays }
 import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
 import { updateMetaBar } from "./theme.js";
 import { getPunkteFuerTag, getCurrentStreak } from "./tasks.js";
-import Sortable from 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js';
+
+let Sortable;
+try {
+    const sortableModule = await import('https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js');
+    Sortable = sortableModule.default;
+} catch (error) {
+    console.error('Failed to load SortableJS from CDN:', error);
+    Sortable = null;
+}
 
 // Cache for the last rendered tasks to optimize UI updates
 let lastRenderedTasks = [];
+const DEFAULT_PROGRESS_RING_RADIUS = 15;
 
 /**
  * Executes all initial rendering operations.
@@ -88,7 +97,7 @@ export function updateTimeTracker(state) {
     const remainingMinutes = totalMinutes - usedMinutes;
     const progress = totalMinutes > 0 ? Math.min((usedMinutes / totalMinutes), 1) : 0;
     const ring = document.getElementById("pc-time-progress-ring");
-    const r = ring?.r?.baseVal?.value ?? 15;
+    const r = ring?.r?.baseVal?.value ?? DEFAULT_PROGRESS_RING_RADIUS;
     const circumference = 2 * Math.PI * r;
     if (ring) {
         ring.style.strokeDasharray = String(circumference);
@@ -344,10 +353,20 @@ function createEmptyState() {
 /**
  * Initializes the sortable functionality for task lists.
  */
+const sortableInstances = new WeakMap();
+
 function initSortable() {
+    if (!Sortable) {
+        console.warn("SortableJS nicht verfügbar, Drag-and-Drop ist deaktiviert.");
+        return;
+    }
     document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
-        if (list.dataset.sortableInit === "1") return;
-        new Sortable(list, {
+        const existingInstance = sortableInstances.get(list);
+        if (existingInstance) {
+            existingInstance.destroy();
+        }
+
+        const sortable = new Sortable(list, {
             animation: 150,
             ghostClass: "opacity-50",
             onEnd: (evt) => {
@@ -364,7 +383,7 @@ function initSortable() {
                 updateState({ tasks: [...otherTasks, ...tasksForDay] });
             }
         });
-        list.dataset.sortableInit = "1";
+        sortableInstances.set(list, sortable);
     });
 }
 
