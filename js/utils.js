@@ -6,7 +6,13 @@ import { wochentage } from "./config.js";
  * @param {Date} date - The date to format.
  * @returns {string} The ISO date string.
  */
-export const getISODate = (date) => date.toISOString().split("T")[0];
+export const getISODate = (date) => {
+    const d = new Date(date);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
 
 /**
  * Gets the start of the week for a given date.
