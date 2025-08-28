@@ -11,17 +11,22 @@ import { quizQuestions } from "./config.js";
  */
 export function addCoins(amount) {
     const { coins } = getState();
-    updateState({ coins: coins + amount });
+    const delta = Number(amount);
+    if (!Number.isFinite(delta) || delta <= 0) return;
+    const next = Math.max(0, (Number(coins) || 0) + delta);
+    updateState({ coins: next });
+
     // Animate the coin icon
     const coinElement = document.querySelector(".coin");
     if (coinElement) {
         coinElement.classList.add("level-up");
-        const timeoutId = setTimeout(() => {
-            // Re-query in case DOM changed
+        if (coinElement._animationTimeoutId) {
+            clearTimeout(coinElement._animationTimeoutId);
+        }
+        coinElement._animationTimeoutId = setTimeout(() => {
             document.querySelector(".coin")?.classList.remove("level-up");
+            coinElement._animationTimeoutId = null;
         }, 1000);
-        // Store timeout for potential cleanup
-        coinElement.dataset.animationTimeout = timeoutId;
     }
 }
 
