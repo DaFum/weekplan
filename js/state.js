@@ -71,7 +71,7 @@ export function subscribe(key, callback) {
  */
 function notifyListeners(newState, oldState) {
     // Determine which keys have changed
-    const changedKeys = Object.keys(newState).filter(key => JSON.stringify(newState[key]) !== JSON.stringify(oldState[key]));
+    const changedKeys = Object.keys(newState).filter(key => newState[key] !== oldState[key]);
 
     if (changedKeys.length === 0) return;
 

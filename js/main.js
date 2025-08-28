@@ -29,14 +29,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // Apply the determined theme immediately
     updateTheme(theme);
 
-    // Initialize various parts of theapplication
-    initEventListeners();
+    // Initialize Audio früh, Listener nach dem ersten Render (Form-Handler brauchen DOM)
     initSounds();
 
     // Perform the initial render of the UI
     renderAllUI();
     updateMotivationsspruch();
     scrollToCurrentDay();
+
+    // Jetzt, da DOM steht, Events binden
+    initEventListeners();
 
     // Initialize games
     initGames();

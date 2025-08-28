@@ -25,7 +25,7 @@ export function updateTheme(theme) {
     document.body.classList.toggle("dark", isDark);
     const toggle = document.getElementById("theme-toggle");
     if (toggle) {
-        toggle.setAttribute("aria-pressed", isDark);
+        toggle.setAttribute("aria-pressed", isDark ? "true" : "false");
     }
     updateThemeIcons(theme);
 }

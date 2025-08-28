@@ -1,5 +1,5 @@
 // A wrapper for localStorage to handle potential errors
-export const storage = {
+const storage = {
     /**
      * Sets an item in localStorage.
      * @param {string} key - The key to set.

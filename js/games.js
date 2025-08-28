@@ -13,8 +13,16 @@ export function addCoins(amount) {
     const { coins } = getState();
     updateState({ coins: coins + amount });
     // Animate the coin icon
-    document.querySelector(".coin")?.classList.add("level-up");
-    setTimeout(() => document.querySelector(".coin")?.classList.remove("level-up"), 1000);
+    const coinElement = document.querySelector(".coin");
+    if (coinElement) {
+        coinElement.classList.add("level-up");
+        const timeoutId = setTimeout(() => {
+            // Re-query in case DOM changed
+            document.querySelector(".coin")?.classList.remove("level-up");
+        }, 1000);
+        // Store timeout for potential cleanup
+        coinElement.dataset.animationTimeout = timeoutId;
+    }
 }
 
 // --- Game Initialization and Flow ---
@@ -82,6 +90,8 @@ function initMemoryGame() {
  * Flips a card in the memory game.
  * @param {number} index - The index of the card to flip.
  */
+let checkMatchTimeout = null;
+
 function flipCard(index) {
     const { memory } = getState();
     const { flippedCards, matchedSymbols, cards } = memory;
@@ -98,7 +108,11 @@ function flipCard(index) {
 
     // If two cards are flipped, check for a match
     if (newFlippedCards.length === 2) {
-        setTimeout(checkMatch, 800);
+        if (checkMatchTimeout) clearTimeout(checkMatchTimeout);
+        checkMatchTimeout = setTimeout(() => {
+            checkMatch();
+            checkMatchTimeout = null;
+        }, 800);
     }
 }
 
@@ -248,9 +262,15 @@ function nextQuizQuestion() {
     } else {
         // If it's the last question, end the game and award coins
         addCoins(quiz.score);
-        document.getElementById("quiz-question").textContent = `Geschafft! Du hast ${quiz.score} Punkte erreicht!`;
-        document.getElementById("quiz-options").innerHTML = "";
-        document.getElementById("quiz-next").classList.add("hidden");
+        const questionEl = document.getElementById("quiz-question");
+        const optionsEl = document.getElementById("quiz-options");
+        if (questionEl) questionEl.textContent = `Geschafft! Du hast ${quiz.score} Punkte erreicht!`;
+        if (optionsEl) {
+            while (optionsEl.firstChild) {
+                optionsEl.removeChild(optionsEl.firstChild);
+            }
+        }
+        document.getElementById("quiz-next")?.classList.add("hidden");
     }
 }
 

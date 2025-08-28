@@ -17,8 +17,10 @@ export function initEventListeners() {
             try {
                 await window.Tone.start();
                 console.log("AudioContext started successfully.");
+                updateState({ audioInitialized: true });
             } catch (e) {
                 console.error("Could not start AudioContext:", e);
+                updateState({ audioInitialized: false });
             }
         }
     };
@@ -92,8 +94,12 @@ export function initEventListeners() {
             const num = raw === "" ? NaN : Number(raw);
             if (typeof promptCallback === "function" && Number.isFinite(num) && num >= 0) {
                 promptCallback(num);
+                closePromptModal();
+            } else if (Number.isFinite(num) && num < 0) {
+                alert("Bitte geben Sie eine positive Zahl ein.");
+            } else {
+                closePromptModal();
             }
-            closePromptModal();
         });
     }
 }
@@ -102,7 +108,7 @@ export function initEventListeners() {
  * Opens the task modal and renders its content.
  * @param {string|null} taskId - Optional: The ID of the task to be edited.
  */
-export function openModal(taskId = null) {
+function openModal(taskId = null) {
     renderTaskModal(getState(), taskId);
     document.getElementById("task-modal")?.classList.remove("hidden");
     document.body.classList.add("modal-open");
@@ -111,7 +117,7 @@ export function openModal(taskId = null) {
 /**
  * Closes the task modal.
  */
-export function closeModal() {
+function closeModal() {
     document.getElementById("task-modal")?.classList.add("hidden");
     document.body.classList.remove("modal-open");
 }
@@ -140,7 +146,7 @@ export function openPromptModal(title, label, initialValue, callback) {
 /**
  * Closes the prompt modal.
  */
-export function closePromptModal() {
+function closePromptModal() {
     document.getElementById("prompt-modal")?.classList.add("hidden");
     if (!document.getElementById("task-modal")?.classList.contains("hidden")) {
         // Do nothing if the task modal is open
