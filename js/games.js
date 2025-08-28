@@ -55,7 +55,11 @@ export function openGame(gameName) {
  * Closes the currently active game.
  */
 export function closeGame() {
-    const { currentGame } = getState();
+    const { currentGame, memory } = getState();
+    if (currentGame === "memory" && memory.checkMatchTimeoutId) {
+        clearTimeout(memory.checkMatchTimeoutId);
+    }
+
     const modalId = currentGame === "memory" ? "memory-game-modal" : "quiz-game-modal";
     document.getElementById(modalId)?.classList.add("hidden");
     updateState({ currentGame: null });
@@ -90,8 +94,6 @@ function initMemoryGame() {
  * Flips a card in the memory game.
  * @param {number} index - The index of the card to flip.
  */
-let checkMatchTimeout = null;
-
 function flipCard(index) {
     const { memory } = getState();
     const { flippedCards, matchedSymbols, cards } = memory;
@@ -108,11 +110,15 @@ function flipCard(index) {
 
     // If two cards are flipped, check for a match
     if (newFlippedCards.length === 2) {
-        if (checkMatchTimeout) clearTimeout(checkMatchTimeout);
-        checkMatchTimeout = setTimeout(() => {
+        const { memory } = getState();
+        if (memory.checkMatchTimeoutId) clearTimeout(memory.checkMatchTimeoutId);
+
+        const timeoutId = setTimeout(() => {
             checkMatch();
-            checkMatchTimeout = null;
+            updateState({ memory: { ...getState().memory, checkMatchTimeoutId: null } });
         }, 800);
+
+        updateState({ memory: { ...memory, checkMatchTimeoutId: timeoutId } });
     }
 }
 

@@ -28,7 +28,8 @@ export function getCurrentStreak(tasks) {
 
     let streak = 0;
     // Use ISO date to avoid timezone issues
-    let cursor = new Date(getISODate(new Date()) + 'T00:00:00');
+    let cursor = new Date(getISODate(new Date()));
+    cursor.setHours(0, 0, 0, 0);
 
     // If no tasks completed today, check if yesterday had completed tasks
     const today = getISODate(cursor);

@@ -9,6 +9,7 @@ let state = {
     coins: 0, // Number of coins
     currentGame: null, // The currently active game
     theme: "light", // The current theme
+    audioInitialized: false,
 
     // Game state
     memory: {
@@ -16,7 +17,8 @@ let state = {
         flippedCards: [],
         matchedPairs: 0,
         score: 0,
-        matchedSymbols: []
+        matchedSymbols: [],
+        checkMatchTimeoutId: null
     },
     quiz: {
         currentQuestion: 0,
