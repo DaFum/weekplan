@@ -56,7 +56,7 @@ export function openGame(gameName) {
  */
 export function closeGame() {
     const { currentGame, memory } = getState();
-    if (currentGame === "memory" && memory.checkMatchTimeoutId) {
+   if (currentGame === "memory" && memory?.checkMatchTimeoutId) {
         clearTimeout(memory.checkMatchTimeoutId);
     }
 
@@ -64,9 +64,14 @@ export function closeGame() {
     document.getElementById(modalId)?.classList.add("hidden");
     updateState({ currentGame: null });
     // Nur entfernen, wenn keine anderen Modals offen sind
-    const hasOtherOpen =
-        !document.getElementById("task-modal")?.classList.contains("hidden") ||
-        !document.getElementById("prompt-modal")?.classList.contains("hidden");
+-   const hasOtherOpen =
+-       !document.getElementById("task-modal")?.classList.contains("hidden") ||
+   const taskEl = document.getElementById("task-modal");
+   const promptEl = document.getElementById("prompt-modal");
+   const hasOtherOpen =
+       (!!taskEl && !taskEl.classList.contains("hidden")) ||
+       (!!promptEl && !promptEl.classList.contains("hidden"));
+
     if (!hasOtherOpen) document.body.classList.remove("modal-open");
 }
 
