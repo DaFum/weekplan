@@ -66,8 +66,15 @@ export function saveTask(event) {
     const dateEl = document.getElementById("task-date");
     if (!kategorie || !nameEl?.value || !dateEl?.value) return;
 
+    // Validate and sanitize task name
+    const taskName = nameEl.value.trim();
+    if (taskName.length === 0 || taskName.length > 100) {
+        alert("Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.");
+        return;
+    }
+
     const taskData = {
-        name: nameEl.value,
+        name: taskName,
         kategorie: kategorie,
         date: dateEl.value,
         durationInMinutes: kategorie === "pc" ? parseInt(document.getElementById("task-duration").value) || 0 : 0
