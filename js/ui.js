@@ -6,13 +6,28 @@ import { updateMetaBar } from "./theme.js";
 import { getPunkteFuerTag, getCurrentStreak } from "./tasks.js";
 
 let Sortable;
-try {
-    const sortableModule = await import('https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js');
-    Sortable = sortableModule.default;
-} catch (error) {
-    console.error('Failed to load SortableJS from CDN:', error);
-    Sortable = null;
+async function loadSortable() {
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sortable.esm.js');
+    return mod?.default ?? mod;
+  } catch (e1) {
+    try {
+      return await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
+        s.async = true;
+        const to = setTimeout(() => { s.remove(); reject(new Error('Sortable load timeout')); }, 5000);
+        s.onload = () => { clearTimeout(to); s.remove(); resolve(window.Sortable); };
+        s.onerror = () => { clearTimeout(to); s.remove(); reject(new Error('Sortable load error')); };
+        document.head.appendChild(s);
+      });
+    } catch (e2) {
+      console.error('Failed to load SortableJS (ESM+UMD).', e1, e2);
+      return null;
+    }
+  }
 }
+Sortable = await loadSortable();
 
 // Cache for the last rendered tasks to optimize UI updates
 let lastRenderedTasks = [];
