@@ -1,11 +1,8 @@
-#1 updates: Restores PR comment posting, permissions, concurrency; ensures review feedback reaches contributors.
-#2 future ideas: Modularize for multi-bot/multi-model reviews, add artifact upload for large diffs, support on-demand trigger.
-#3 issues+fixes: Addresses missing comment posting, permission regression, concurrency bug, and improves failure notification.
-# Compliments: Synthesizer demonstrates comprehensive context analysis and workflow craftsmanship.
+---
 
 name: Gemini PR Automation
 
-on:
+'on':
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -15,28 +12,48 @@ concurrency:
 
 jobs:
   gemini-pr-review:
+    if: contains(github.event.pull_request.labels.*.name, 'needs-ai-review')
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write
+      issues: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install Gemini CLI
-        run: npm install -g @google/gemini-cli
+        run: |
+          npm install --silent --no-audit --prefer-offline \
+            --global @google/gemini-cli@0.1.12
+
+      - name: Check for required secrets
+        run: |
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "::error::GEMINI_API_KEY secret is not configured."
+            exit 1
+          fi
 
       - name: Generate PR diff
         run: |
           git fetch origin ${{ github.base_ref }}
-          git diff origin/${{ github.base_ref }}...HEAD > pr_diff.txt
+          git diff origin/${{ github.base_ref }}...HEAD > pr_diff_full.txt
+          MAX=120000
+          head -c $MAX pr_diff_full.txt > pr_diff.txt
+          if [ $(wc -c < pr_diff_full.txt) -gt $MAX ]; then
+            echo "::warning::Diff truncated to $MAX bytes" >&2
+          fi
 
       - name: Run Gemini review
         id: gemini_run
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if ! output=$(gemini review --diff-file pr_diff.txt 2>&1); then
             status=$?
             echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-            echo ":warning: Gemini CLI failed (exit code $status). Raw output: $output" >> $GITHUB_OUTPUT
+              printf ':warning: Gemini CLI failed (exit code %s).\n' \
+                "$status" >> $GITHUB_OUTPUT
+              printf 'Raw output: %s\n' \
+                "$output" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
             exit $status
           fi
@@ -46,7 +63,8 @@ jobs:
 
       - name: Verify Gemini output
         run: |
-          if [ -z "$GEMINI_RESPONSE" ]; then
+          if [ -z "$GEMINI_RESPONSE" ] || \
+             grep -q '^:warning:' <<< "$GEMINI_RESPONSE"; then
             echo "Gemini CLI action did not produce a response."
             exit 1
           fi
@@ -57,10 +75,13 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
+            const issue_number = context.payload.pull_request
+              ? context.payload.pull_request.number
+              : context.issue.number;
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number,
               body: `${{ steps.gemini_run.outputs.gemini_response }}`
             });
 
@@ -69,9 +90,15 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
+            const issue_number = context.payload.pull_request
+              ? context.payload.pull_request.number
+              : context.issue.number;
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: ':warning: Gemini review failed. See the [Actions tab](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
+              issue_number,
+              body:
+                ':warning: Gemini review failed. See the [Actions tab](' +
+                '${{ github.server_url }}/${{ github.repository }}/actions/' +
+                'runs/${{ github.run_id }}) for details.'
             });
