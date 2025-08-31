@@ -35,10 +35,43 @@ let nextListenerId = 0;
  * Returns a copy of the current state.
  * @returns {Object} The current state.
  */
+// js/state.js
+
+/**
+ * Deep-clones only the JSON-serializable parts of `obj` while
+ * preserving any non-cloneable fields (e.g. functions, Tone objects).
+ */
+function safeDeepClone(obj) {
+    // Extract known non-cloneable fields to reattach later.
+    const { sounds, promptCallback, ...jsonPart } = obj;
+
+    // Attempt #1: structuredClone
+    if (typeof structuredClone === 'function') {
+        try {
+            const cloned = structuredClone(jsonPart);
+            return { ...cloned, sounds, promptCallback };
+        } catch (_) {
+            // structuredClone failed (e.g. nested uncloneables), fall through
+        }
+    }
+
+    // Attempt #2: JSON
+    try {
+        const cloned = JSON.parse(JSON.stringify(jsonPart));
+        return { ...cloned, sounds, promptCallback };
+    } catch (_) {
+        // JSON fallback failed too, last resort: shallow copy of entire state
+        return { ...obj };
+    }
+}
+
+/**
+ * Returns a deep copy of the application state for safe reads.
+ * Non-serializable parts of the state (sounds, callbacks) are
+ * preserved by reference to avoid runtime cloning errors.
+ */
 export function getState() {
-    return typeof structuredClone === 'function'
-        ? structuredClone(state)
-        : JSON.parse(JSON.stringify(state));
+    return safeDeepClone(state);
 }
 
 /**
