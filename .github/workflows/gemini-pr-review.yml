@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened, labeled]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -51,16 +51,15 @@ jobs:
           head -c $MAX_DIFF_BYTES pr_diff_full.txt > pr_diff.txt
       - name: Run Gemini review
         id: gemini_run
+        timeout-minutes: 5
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          if ! output=$(gemini review --diff-file pr_diff.txt 2>&1); then
+          if ! output=$(gemini review --diff-file pr_diff.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
             status=$?
             echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-              printf ':warning: Gemini CLI failed (exit code %s).\n' \
-                "$status" >> $GITHUB_OUTPUT
-              printf 'Raw output: %s\n' \
-                "$output" >> $GITHUB_OUTPUT
+            printf ':warning: Gemini CLI failed (exit code %s).\n' "$status" >> $GITHUB_OUTPUT
+            printf 'Raw output: %s\n' "$output" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
             exit $status
           fi
@@ -84,25 +83,27 @@ jobs:
       - name: Post PR Review Comment
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-              const issue_number = context.payload.pull_request
-                ? context.payload.pull_request.number
-                : context.issue.number;
-              const raw = ${{ toJson(steps.gemini_run.outputs.gemini_response) }};
-              const MAX = 65000;
-              const trunc = "\n\n…[truncated]";
-              const body = raw.length > MAX
-                ? raw.slice(0, MAX - trunc.length) + trunc
-                : raw;
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number,
-                  with:
+            const issue_number = context.payload.pull_request
+              ? context.payload.pull_request.number
+              : context.issue.number;
+            const raw = ${{ toJson(steps.gemini_run.outputs.gemini_response) }};
+            const MAX = 65000;
+            const trunc = "\n\n…[truncated]";
+            const body = raw.length > MAX ? raw.slice(0, MAX - trunc.length) + trunc : raw;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body
+            });
+
       - name: Post PR review as comment (if needed)
-        if: failure()
+        if: failure() && steps.check_secrets.outputs.skip != 'true'
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue_number = context.payload.pull_request
               ? context.payload.pull_request.number
@@ -111,8 +112,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
-              body:
-                ':warning: Gemini review failed. See the [Actions tab](' +
-                '${{ github.server_url }}/${{ github.repository }}/actions/' +
-                'runs/${{ github.run_id }}) for details.'
+              body: ':warning: Gemini review failed. See the Actions tab for details: '
+                + `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
             });
