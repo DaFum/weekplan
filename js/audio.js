@@ -39,7 +39,20 @@ export async function initSounds() {
                 script.async = true;
                 script.onload = () => resolve(window.Tone);
                 script.onerror = () => reject(new Error('Tone.js script failed to load'));
-                document.head.appendChild(script);
+                const timeoutId = setTimeout(() => {
+                  document.head.removeChild(script);
+                  reject(new Error('Tone.js script load timed out'));
+                }, 5000);
+                script.onload = () => {
+                  clearTimeout(timeoutId);
+                  document.head.removeChild(script);
+                  resolve(window.Tone);
+                };
+                script.onerror = () => {
+                  clearTimeout(timeoutId);
+                  document.head.removeChild(script);
+                  reject(new Error('Tone.js script failed to load'));
+                };
                 setTimeout(() => reject(new Error('Tone.js script load timed out')), 5000);
             });
         } catch (error) {
