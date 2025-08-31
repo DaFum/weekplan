@@ -62,11 +62,6 @@ export async function initSounds() {
         }
     }
 
-    if (!Tone || !Tone.Synth) {
-        console.error('Tone.js could not be loaded or audio synthesizers could not be created. Audio functions are disabled.');
-        updateState({ sounds: {} });
-        return;
-    }
 
     // Create the synthesizers
     const sounds = {
