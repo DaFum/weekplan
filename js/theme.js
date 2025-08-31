@@ -63,7 +63,6 @@ export function updateMetaBar(state) {
     const percent = wochenZiel > 0
       ? Math.max(0, Math.min(100, Math.round((done / wochenZiel) * 100)))
       : 0;
-      : 0;
     document.title = `${percent}% · Wochen-Power`;
     const meta = document.getElementById("themeMeta");
     if (meta) meta.setAttribute("content", percent >= 100 ? "#10b981" : "#0284c7");
