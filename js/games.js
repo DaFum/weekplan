@@ -330,7 +330,7 @@ function renderQuiz(selectedIndex = null) {
                 button.classList.add("bg-red-200", "text-black");
             }
         } else {
-            button.addEventListener("click", () => checkQuizAnswer(index));
+            // Event-Delegation in events.js übernimmt den Klick
         }
 
         optionsContainer.appendChild(button);
