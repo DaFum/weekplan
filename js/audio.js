@@ -25,7 +25,8 @@ export async function initSounds() {
         );
         const module = await Promise.race([importPromise, timeoutPromise]);
         Tone = module?.default || module?.Tone || module;
-    } catch {
+    } catch (error) {
+        console.warn("Tone.js dynamic import failed, falling back to script tag.", error);
         Tone = null;
     }
 
