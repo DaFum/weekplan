@@ -96,15 +96,24 @@ export function updateTimeTracker(state) {
     const totalMinutes = pcStundenGesamt * 60;
     const remainingMinutes = totalMinutes - usedMinutes;
     const progress = totalMinutes > 0 ? Math.min((usedMinutes / totalMinutes), 1) : 0;
+    
     const ring = document.getElementById("pc-time-progress-ring");
-    const r = ring?.r?.baseVal?.value ?? DEFAULT_PROGRESS_RING_RADIUS;
-    const circumference = 2 * Math.PI * r;
     if (ring) {
+        const r = ring?.r?.baseVal?.value ?? DEFAULT_PROGRESS_RING_RADIUS;
+        const circumference = 2 * Math.PI * r;
         ring.style.strokeDasharray = String(circumference);
         ring.style.strokeDashoffset = String(circumference * (1 - progress));
     }
-    document.getElementById("pc-time-progress-text").textContent = `${Math.round(progress * 100)}%`;
-    document.getElementById("pc-time-remaining").textContent = formatMinutes(remainingMinutes);
+    
+    const progressText = document.getElementById("pc-time-progress-text");
+    if (progressText) {
+        progressText.textContent = `${Math.round(progress * 100)}%`;
+    }
+    
+    const remainingEl = document.getElementById("pc-time-remaining");
+    if (remainingEl) {
+        remainingEl.textContent = formatMinutes(remainingMinutes);
+    }
 }
 
 /**
