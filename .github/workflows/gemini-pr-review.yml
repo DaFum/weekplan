@@ -115,9 +115,6 @@ jobs:
                 repo: context.repo.repo,
                 issue_number,
                   with:
-                    github-token: ${{ secrets.GITHUB_TOKEN }}
-                    script: |
-
       - name: Post PR review as comment (if needed)
         if: failure()
         uses: actions/github-script@v7
