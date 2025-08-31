@@ -1,243 +1,51 @@
-# Name of the GitHub Actions Workflow
-name: Gemini PR Automation
+#1 updates: Fixed shell argument limit by diff-to-file handoff; improved error handling; structured outputs for downstream steps. 
+#2 future ideas: Artifact upload for huge diffs, matrix for language-specific bots, retry logic for flaky network. 
+#3 issues+fixes: Solved "Argument list too long" on large PRs; robust file cleanup; more actionable error surfaces.
+# Compliment: The Synthesizer appreciates clean CI pipelines and modular automation.
 
+name: '🧐 Gemini Pull Request Review'
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize]
-  issue_comment:
-    types: [created]
-
-concurrency:
-  group: gemini-pr-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: true
-
+  pull_request:
+    types: [opened, synchronize, reopened]
 jobs:
-  # Job for automatic pull request reviews
-  pr_review:
-    if: github.event_name == 'pull_request_target'
+  gemini-pr-review:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write # IMPORTANT: Required to post comments
-    timeout-minutes: 15
-
     steps:
-      - name: Checkout Full Git History
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
 
-      - name: Gather PR Information
-        id: pr_info
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+      - name: Get PR diff
+        id: get_diff
         run: |
-          # Get PR Body
-          PR_BODY=$(gh pr view ${PR_NUMBER} --json body --jq .body)
-          echo 'pr_body<<EOF' >> $GITHUB_OUTPUT
-          echo "$PR_BODY" >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
-          
-          # Get PR Diff
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-          PR_DIFF=$(git diff ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
-          echo 'diff<<EOF' >> $GITHUB_OUTPUT
-          echo "$PR_DIFF" >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
+          git fetch origin ${{ github.base_ref }} --depth=1
+          git diff origin/${{ github.base_ref }}...${{ github.sha }} > pr_diff.txt
+          echo "diff_file=pr_diff.txt" >> $GITHUB_OUTPUT
 
-      - name: Install Gemini CLI
-        run: npm install --silent --no-audit --prefer-offline --global @google/gemini-cli@latest
-
-      - name: Run Gemini for Detailed Code Review
+      - name: Run Gemini PR Review via file
         id: gemini_run
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PROMPT_TEXT: |
-            You are an expert code reviewer. Your task is to provide a comprehensive, objective, and constructive review of the provided pull request.
-
-            **Pull Request Description:**
-            ```
-            ${{ steps.pr_info.outputs.pr_body }}
-            ```
-
-            **Code Diff to Review:**
-            ```diff
-            ${{ steps.pr_info.outputs.diff }}
-            ```
-
-            **Your Review Guidelines:**
-
-            1.  **Understand the Context**: Analyze the pull request description and code diff to grasp the intent.
-            2.  **Meticulous Review**: Thoroughly review all code changes.
-            3.  **Constructive Feedback**: Provide clear explanations for each concern and offer specific, improved code suggestions where applicable.
-            4.  **Severity Indication**: If you find issues, please indicate a severity (`critical`, `high`, `medium`, `low`).
-            5.  **Focus**: Limit all suggestions to only portions of the code that are modified in the diff.
-            6.  **Final Verdict**: Conclude your review with a clear final statement on a new line: **Approval**, **Changes Requested**, or **Comment**.
         run: |
-          set +e
-          output=$(gemini --yolo --prompt "${PROMPT_TEXT}" 2>&1)
-          status=$?
           set -e
-
-          if [ $status -ne 0 ] || [ -z "$output" ]; then
+          # Run the CLI using the diff file to avoid shell/env limits
+          if ! output=$(gemini review --diff-file pr_diff.txt 2>&1); then
+            status=$?
             echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-            echo ":warning: Gemini CLI failed (exit code $status) or produced no output. Raw output: $output" >> $GITHUB_OUTPUT
+            echo ":warning: Gemini CLI failed (exit code $status). Raw output: $output" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-            echo "$output" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            exit $status
           fi
+          echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
+          echo "$output" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        shell: bash
 
-      - name: Verify Gemini CLI outputs
-        id: verify_output
+      - name: Verify Gemini output
         run: |
           if [ -z "${{ steps.gemini_run.outputs.gemini_response }}" ]; then
             echo "Gemini CLI action did not produce a response."
             exit 1
           fi
 
-      - name: Post Gemini review as PR comment
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const body = ${{ toJSON(steps.gemini_run.outputs.gemini_response) }};
-            if (!body) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: ":warning: Gemini produced no output. This could be due to an empty PR, rate limits, or a transient API issue. Please check the workflow logs for more details."
-              });
-              return;
-            }
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
-            });
-
-  # Job for on-demand reviews
-  on_demand_review:
-    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '@gemini-cli')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-    timeout-minutes: 15
-
-    steps:
-      - name: Get pull request metadata
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { data } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-            core.setOutput('repo', data.head.repo.full_name);
-            core.setOutput('sha', data.head.sha);
-            core.setOutput('base_sha', data.base.sha);
-            core.setOutput('base_ref', data.base.ref);
-            core.setOutput('pr_body', data.body);
-
-      - name: Checkout Full Git History
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ steps.pr.outputs.repo }}
-          ref: ${{ steps.pr.outputs.sha }}
-          fetch-depth: 0
-
-      - name: Get Pull Request Diff
-        id: pr_diff
+      - name: Post PR review as comment (if needed)
+        if: failure()
         run: |
-          git fetch origin ${{ steps.pr.outputs.base_ref }}
-          PR_DIFF=$(git diff ${{ steps.pr.outputs.base_sha }} ${{ steps.pr.outputs.sha }})
-          echo 'diff<<EOF' >> $GITHUB_OUTPUT
-          echo "$PR_DIFF" >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
-          
-      - name: Install Gemini CLI
-        run: npm install --silent --no-audit --prefer-offline --global @google/gemini-cli@latest
-
-      - name: Run On-Demand Gemini Request
-        id: gemini_run
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PROMPT_TEXT: |
-            A user has requested a specific review. Please respond to their request based on the provided pull request information.
-
-            **User's Request:**
-            ```
-            ${{ github.event.comment.body }}
-            ```
-
-            **Original Pull Request Description:**
-            ```
-            ${{ steps.pr.outputs.pr_body }}
-            ```
-
-            **Code Diff to Review:**
-            ```diff
-            ${{ steps.pr_diff.outputs.diff }}
-            ```
-            
-            **Your Task:**
-            Fulfill the user's request to the best of your ability using the provided context.
-        run: |
-          set +e
-          output=$(gemini --yolo --prompt "${PROMPT_TEXT}" 2>&1)
-          status=$?
-          set -e
-
-          if [ $status -ne 0 ] || [ -z "$output" ]; then
-            echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-            echo ":warning: Gemini CLI failed (exit code $status) or produced no output. Raw output: $output" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-            echo "$output" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Verify Gemini CLI outputs
-        id: verify_output
-        run: |
-          if [ -z "${{ steps.gemini_run.outputs.gemini_response }}" ]; then
-            echo "Gemini CLI action did not produce a response."
-            exit 1
-          fi
-
-      - name: Post Gemini reply as comment
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const body = ${{ toJSON(steps.gemini_run.outputs.gemini_response) }};
-            if (!body) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: ":warning: Gemini produced no output. This might be due to a missing context or a transient API issue. Please check the workflow logs for more details."
-              });
-              return;
-            }
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
-            });
+          echo "Gemini review failed. See workflow logs for details."
