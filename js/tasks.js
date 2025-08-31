@@ -153,7 +153,11 @@ export function deleteTask(taskId) {
  */
 export function cleanupOldTasks() {
     const { tasks } = getState();
-    const startOfCurrentWeekISO = getISODate(getStartOfWeek(new Date()));
+    const start = getStartOfWeek(new Date());
+    // Lokales YYYY-MM-DD ableiten (ohne UTC-Verschiebung)
+    const startOfCurrentWeekISO = new Date(start.getTime() - start.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split('T')[0];
     updateState({ tasks: tasks.filter(task => task && task.date && task.date >= startOfCurrentWeekISO) });
 }
 
