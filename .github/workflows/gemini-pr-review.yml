@@ -36,22 +36,6 @@ jobs:
           fi
           echo "skip=false" >> $GITHUB_OUTPUT
 
-      - name: Run Gemini review
-        if: steps.check_secrets.outputs.skip != 'true'
-        # … existing run/tests for the Gemini review …
-
-      - name: Verify Gemini output
-        if: steps.check_secrets.outputs.skip != 'true'
-        # … existing verification logic …
-
-      - name: Post PR Review Comment
-        if: steps.check_secrets.outputs.skip != 'true'
-        # … existing comment-posting logic …
-
-      - name: Post PR review as comment (if needed)
-        if: failure() && steps.check_secrets.outputs.skip != 'true'
-        # … existing conditional comment-on-failure logic …
-
       - name: Generate PR diff
         run: |
           git fetch --no-tags --prune --depth=0 origin ${{ github.base_ref }}
