@@ -166,6 +166,8 @@ export function openPromptModal(title, label, initialValue, callback) {
  */
 function closePromptModal() {
     document.getElementById("prompt-modal")?.classList.add("hidden");
+    // Callback zurücksetzen, um veraltete Referenzen zu vermeiden
+    updateState({ promptCallback: null });
     if (!document.getElementById("task-modal")?.classList.contains("hidden")) {
         // Do nothing if the task modal is open
     } else {
