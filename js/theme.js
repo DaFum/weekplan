@@ -1,60 +1,70 @@
-import { getStartOfWeek, getISODate } from './utils.js';
-import { getState, updateState } from './state.js';
+// Import necessary functions and data from other modules
+import { getStartOfWeek, getISODate } from "./utils.js";
+import { getState, updateState } from "./state.js";
 
 /**
- * Schaltet das App-Theme zwischen 'dark' und 'light'.
+ * Toggles the app theme between 'dark' and 'light'.
  *
- * Liest das aktuelle Theme aus dem globalen Zustand und setzt das entgegengesetzte Theme
- * mittels updateState({ theme: newTheme }).
+ * Reads the current theme from the global state and sets the opposite theme
+ * using updateState({ theme: newTheme }).
  */
 export function toggleTheme() {
     const state = getState();
-    const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+    const newTheme = state.theme === "dark" ? "light" : "dark";
     updateState({ theme: newTheme });
 }
 
 /**
- * Setzt das Anwendungs-Theme: aktiviert den Dark-Mode, wenn `theme === 'dark'`, sonst deaktiviert er ihn.
+ * Sets the application theme: activates dark mode if `theme === 'dark'`, otherwise deactivates it.
  *
- * Fügt die CSS-Klasse `dark` an document.body hinzu (bei Dark-Mode) bzw. entfernt sie und aktualisiert das Theme-Icon.
- * @param {string} theme - Erwartet `'dark'` zum Aktivieren des Dark-Modes; jeder andere Wert schaltet in den Light-Mode.
+ * Adds or removes the `dark` CSS class to/from document.body and updates the theme icon.
+ * @param {string} theme - Expects 'dark' to activate dark mode; any other value switches to light mode.
  */
 export function updateTheme(theme) {
-    if (theme === 'dark') {
-        document.body.classList.add('dark');
-    } else {
-        document.body.classList.remove('dark');
+    const isDark = theme === "dark";
+    document.body.classList.toggle("dark", isDark);
+    const toggle = document.getElementById("theme-toggle");
+    if (toggle) {
+        toggle.setAttribute("aria-pressed", isDark ? "true" : "false");
     }
     updateThemeIcons(theme);
 }
 
 /**
- * Aktualisiert das Theme-Icon im DOM entsprechend des übergebenen Themes.
+ * Updates the theme icon in the DOM according to the given theme.
  *
- * Setzt das Text-Icon des Elements mit der ID "theme-icon" auf "🌙" für `dark`,
- * andernfalls auf "🌞".
+ * Sets the text icon of the element with the ID "theme-icon" to "🌙" for 'dark',
+ * otherwise to "🌞".
  *
- * @param {string} theme - Erwartet den Theme-Namen, z. B. `'dark'` oder `'light'`.
+ * @param {string} theme - Expects the theme name, e.g., 'dark' or 'light'.
  */
 function updateThemeIcons(theme) {
-    const isDark = theme === 'dark';
-    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '🌞';
+    const isDark = theme === "dark";
+    const el = document.getElementById("theme-icon");
+    if (el) el.textContent = isDark ? "🌙" : "🌞";
 }
 
 /**
- * Aktualisiert Titel und Theme-Meta-Farbe basierend auf dem Wochenfortschritt.
+ * Updates the title and theme-meta color based on weekly progress.
  *
- * Ermittelt aus dem globalen Zustand die Aufgaben und das Wochenziel, zählt die innerhalb der aktuellen Kalenderwoche erledigten Aufgaben und berechnet daraus einen Prozentwert (0–100, 0 falls wochenZiel <= 0). Setzt anschließend document.title auf "<percent>% · Wochen-Power" und aktualisiert das Meta-Tag mit der id "themeMeta" auf Grün ('#10b981') bei 100% oder mehr, sonst Blau ('#0284c7').
+ * Determines the tasks and weekly goal from the global state, counts the tasks completed
+ * within the current calendar week, and calculates a percentage (0–100, 0 if wochenZiel <= 0).
+ * Then sets document.title to "<percent>% · Wochen-Power" and updates the meta tag with the
+ * id "themeMeta" to green ('#10b981') at 100% or more, otherwise blue ('#0284c7').
  */
-export function updateMetaBar() {
-    const state = getState();
+export function updateMetaBar(state) {
     const { tasks, wochenZiel } = state;
     const start = getStartOfWeek(new Date());
     const end = new Date(start); end.setDate(end.getDate() + 7);
-    const done = tasks.filter(t => t.erledigt && t.date >= getISODate(start) && t.date < getISODate(end)).length;
+    const done = tasks.filter(t =>
+        t && t.erledigt && t.date &&
+        t.date >= getISODate(start) && t.date < getISODate(end)
+    ).length;
     const percent = wochenZiel > 0
       ? Math.max(0, Math.min(100, Math.round((done / wochenZiel) * 100)))
       : 0;
+      : 0;
     document.title = `${percent}% · Wochen-Power`;
-    document.getElementById('themeMeta').setAttribute('content', percent >= 100 ? '#10b981' : '#0284c7');
+    const meta = document.getElementById("themeMeta");
+    if (meta) meta.setAttribute("content", percent >= 100 ? "#10b981" : "#0284c7");
 }

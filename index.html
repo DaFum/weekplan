@@ -1,65 +1,81 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+    <!-- Meta tags for character set, viewport, and title -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wochenplaner Pro</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <!-- Google Fonts for typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Web app manifest for PWA capabilities -->
     <link rel="manifest" href="manifest.json">
+    <!-- Meta tags for PWA on iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <!-- Theme color for the browser chrome -->
     <meta name="theme-color" content="#0284c7" id="themeMeta">
+    <!-- Custom stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-slate-800">
 
-    <div id="konfetti-container" class="konfetti"></div>
-
+    <!-- Container for confetti effect -->
+    <div id="konfetti-container" class="konfetti" aria-hidden="true"></div>
+    <!-- Main container for the application -->
     <div class="container mx-auto max-w-4xl p-4 min-h-screen flex flex-col">
+        <!-- Header section -->
         <header class="header-container">
             <h1 class="header-title font-black">Wochen-Power</h1>
             <p id="motivations-spruch" class="motivation-text">Lade deine Woche mit Erfolg auf!</p>
+            <!-- Theme toggle button -->
             <button id="theme-toggle" class="theme-toggle text-secondary hover:bg-accent transition-colors" aria-label="Farbschema wechseln">
                 <span id="theme-icon" class="text-2xl">🌞</span>
             </button>
         </header>
 
+        <!-- Section for task statistics -->
         <section class="task-grid mb-6">
             <div id="pc-time-tracker" class="stats-card"></div>
             <div id="weekly-goal-tracker" class="stats-card"></div>
             <div id="streak-tracker" class="stats-card"></div>
         </section>
 
+        <!-- Section for mini-games -->
         <div class="game-section">
             <div class="game-section-header">
                 <h2 class="game-section-title">🎮 Mini-Spiele</h2>
+                <!-- Coins display -->
                 <div class="coins-display">
-                    <span class="coin">💰</span>
-                    <span id="coins-count">0</span>
+                    <span class="coin" aria-hidden="true">💰</span>
+                    <span id="coins-count" aria-live="polite" role="status">0</span>
                 </div>
             </div>
             <div class="game-grid">
-                <div id="open-memory-game" class="game-card bg-gradient-to-r from-blue-400 to-blue-600 text-white">
+                <!-- Memory game card -->
+                <button id="open-memory-game" type="button" class="game-card bg-gradient-to-r from-blue-400 to-blue-600 text-white" aria-label="Memory Spiel starten">
                     <div class="font-bold">Memory</div>
                     <div class="text-sm opacity-90">Finde Paare</div>
-                </div>
-                <div id="open-quiz-game" class="game-card bg-gradient-to-r from-green-400 to-green-600 text-white">
+                </button>
+                <!-- Quiz game card -->
+                <button id="open-quiz-game" type="button" class="game-card bg-gradient-to-r from-green-400 to-green-600 text-white" aria-label="Quiz Spiel starten">
                     <div class="font-bold">Quiz</div>
                     <div class="text-sm opacity-90">Wissenscheck</div>
-                </div>
+                </button>
             </div>
         </div>
 
-        <nav id="wochen-nav" class="week-navigation"></nav>
+        <!-- Navigation for weeks -->
+        <nav id="wochen-nav" class="week-navigation" aria-label="Wochennavigation"></nav>
+        <!-- Main container for the weekly plan -->
         <main id="wochen-container" class="flex-grow"></main>
 
+        <!-- Floating action button to open the task modal -->
         <div class="floating-button">
-            <button id="open-task-modal" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:shadow-xl hover:bg-indigo-700 transform hover:scale-110 transition-all duration-300 pulse relative overflow-hidden">
+            <button id="open-task-modal" aria-label="Neue Aufgabe erstellen" class="bg-indigo-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:shadow-xl hover:bg-indigo-700 transform hover:scale-110 transition-all duration-300 pulse relative overflow-hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-8 h-8">
                     <path fill-rule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clip-rule="evenodd" />
                 </svg>
@@ -67,14 +83,14 @@
         </div>
     </div>
 
-    <!-- Modal für Aufgaben -->
-    <div id="task-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end">
+    <!-- Modal for creating and editing tasks -->
+    <div id="task-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-end" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content w-full max-w-lg mx-auto rounded-t-3xl p-6">
             <div class="modal-header">
                 <h2 id="modal-title" class="modal-title">Neue Aufgabe erstellen</h2>
-                <button id="close-task-modal" class="text-secondary hover:text-accent">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <button id="close-task-modal" type="button" class="close-modal text-secondary hover:text-accent" aria-label="Dialog schließen">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" …>
+                        <!-- icon path -->
                     </svg>
                 </button>
             </div>
@@ -89,6 +105,7 @@
                 <div class="form-group">
                     <label class="form-label">Kategorie</label>
                     <div class="flex space-x-2" id="kategorie-selector">
+                        <!-- Category selection -->
                         <label class="flex-1">
                             <input type="radio" name="kategorie" value="schule" class="sr-only" checked>
                             <div class="category-btn p-3 text-center rounded-lg border-2 border-border-color cursor-pointer transition">📚 Schule</div>
@@ -119,12 +136,12 @@
         </div>
     </div>
 
-    <!-- Generisches Modal für Einstellungen -->
-      <div id="prompt-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <!-- Generic modal for settings -->
+      <div id="prompt-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="prompt-modal-title">
           <div class="bg-secondary rounded-2xl p-6 w-full max-w-md">
               <div class="modal-header">
                   <h2 id="prompt-modal-title" class="modal-title"></h2>
-                  <button type="button" id="close-prompt-modal" class="close-modal text-secondary hover:text-accent">
+                  <button type="button" id="close-prompt-modal" class="close-modal text-secondary hover:text-accent" aria-label="Dialog schließen">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
@@ -144,10 +161,10 @@
       </div>
 
     <!-- Memory Game Modal -->
-    <div id="memory-game-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div id="memory-game-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="memory-modal-title">
         <div class="minigame-modal bg-secondary rounded-2xl p-6 w-full max-w-md">
             <div class="modal-header">
-                <h2 class="modal-title">Memory Spiel</h2>
+                <h2 id="memory-modal-title" class="modal-title">Memory Spiel</h2>
                 <button class="close-game-btn text-secondary hover:text-accent">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -167,10 +184,10 @@
     </div>
 
     <!-- Quiz Game Modal -->
-    <div id="quiz-game-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div id="quiz-game-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="quiz-modal-title">
         <div class="minigame-modal bg-secondary rounded-2xl p-6 w-full max-w-md">
             <div class="modal-header">
-                <h2 class="modal-title">Quiz Spiel</h2>
+                <h2 id="quiz-modal-title" class="modal-title">Quiz Spiel</h2>
                 <button class="close-game-btn text-secondary hover:text-accent">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -190,6 +207,7 @@
         </div>
     </div>
 
+    <!-- Main JavaScript file, loaded as a module -->
     <script src="js/main.js" type="module"></script>
 </body>
 </html>

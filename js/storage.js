@@ -1,4 +1,10 @@
-export const storage = {
+// A wrapper for localStorage to handle potential errors
+const storage = {
+    /**
+     * Sets an item in localStorage.
+     * @param {string} key - The key to set.
+     * @param {string} value - The value to set.
+     */
     setItem: (key, value) => {
         try {
             localStorage.setItem(key, value);
@@ -6,6 +12,11 @@ export const storage = {
             console.warn("localStorage is not available, data will not be persisted.", e);
         }
     },
+    /**
+     * Gets an item from localStorage.
+     * @param {string} key - The key to get.
+     * @returns {string|null} The value of the item, or null if not found or an error occurs.
+     */
     getItem: (key) => {
         try {
             return localStorage.getItem(key);
@@ -16,15 +27,16 @@ export const storage = {
     }
 };
 
+const DATA_KEY = 'wochenplanerData';
+
 /**
- * Speichert ausgewählte Teile des übergebenen Anwendungszustands in den persistenten Speicher.
+ * Saves selected parts of the application state to persistent storage.
  *
- * Speichert die folgenden Felder von `state` unter dem Schlüssel `'wochenplanerData'` als JSON:
+ * This function saves the following fields from the `state` object under the key `'wochenplanerData'` as a JSON string:
  * `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme`, `coins`.
- * Bei Fehlern während der Serialisierung oder des Speichervorgangs wird der Fehler geloggt; es wird
- * keine Ausnahme weitergeworfen.
+ * If an error occurs during serialization or saving, the error is logged, but no exception is thrown.
  *
- * @param {Object} state - Der Anwendungszustand; erwartet mindestens die Felder `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme` und `coins`.
+ * @param {Object} state - The application state, expected to have at least `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme`, and `coins` fields.
  */
 export function saveData(state) {
     const dataToSave = {
@@ -34,34 +46,41 @@ export function saveData(state) {
         theme: state.theme,
         coins: state.coins
     };
+    let json;
     try {
-        storage.setItem('wochenplanerData', JSON.stringify(dataToSave));
+        json = JSON.stringify(dataToSave);
     } catch (e) {
-        console.error("Fehler beim Speichern der Daten:", e);
+        console.error("Error saving data:", e);
+        return;
     }
+    storage.setItem(DATA_KEY, json);
 }
 
 /**
- * Lädt persistierte Anwendungsdaten aus dem lokalen Speicher.
+ * Loads persisted application data from local storage.
  *
- * Versucht, den JSON-String unter dem Schlüssel 'wochenplanerData' aus dem `storage`
- * zu lesen und zu parsen. Bei Erfolg wird das geparste Objekt zurückgegeben
- * (erwartete Felder: z. B. `tasks`, `pcStundenGesamt`, `wochenZiel`, `theme`, `coins`).
- * Bei fehlenden Daten, JSON-Fehlern oder anderen Fehlern wird ein leeres Objekt
- * zurückgegeben und der Fehler in der Konsole protokolliert.
+ * Bei fehlenden Daten oder JSON-Fehlern wird ein normalisiertes Objekt mit Default-Werten
+ * (z. B. `tasks: []`, `pcStundenGesamt: 0`, `wochenZiel: 10`, `coins: 0`) zurückgegeben.
  *
- * @returns {Object} Das geladene Datenobjekt oder ein leeres Objekt bei Fehler/nicht vorhandenem Eintrag.
+ * @returns {Object} Normalisiertes Datenobjekt (immer mit Default-Feldern befüllt).
  */
 export function loadData() {
     let data = {};
-    try {
-        const savedData = storage.getItem('wochenplanerData');
-        if (savedData) {
+    const savedData = storage.getItem(DATA_KEY);
+    if (savedData) {
+        try {
             data = JSON.parse(savedData);
+        } catch (e) {
+            console.error("Error loading data:", e);
         }
-    } catch (e) {
-        console.error("Fehler beim Laden der Daten:", e);
-        data = {}; // Reset to empty object on error
     }
+    
+    // Ensure required properties exist with default values (both for success and error cases)
+    data.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+    data.pcStundenGesamt = typeof data.pcStundenGesamt === 'number' ? data.pcStundenGesamt : 0;
+    data.wochenZiel = typeof data.wochenZiel === 'number' ? data.wochenZiel : 10;
+    data.coins = typeof data.coins === 'number' ? data.coins : 0;
+    data.theme = typeof data.theme === 'string' ? data.theme : 'light';
+    
     return data;
 }

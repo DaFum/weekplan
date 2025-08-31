@@ -1,20 +1,40 @@
+// Import the updateState function from the state module
 import { updateState } from './state.js';
 
 /**
- * Initialisiert drei einfache Tone.Synth-Instrumente und registriert sie im Anwendungszustand.
+ * Initializes three simple Tone.Synth instruments and registers them in the application state.
  *
- * Legt die folgenden Synthesizer an und verbindet sie mit der Audio-Ausgabe:
- * - `complete`: Sinus-Oszillator, schnelles Attack, mittleres Release (für Erfolgstöne).
- * - `confetti`: Dreieck-Oszillator, etwas längeres Attack/Decay (für Konfetti-/Feier-Effekte).
- * - `coin`: Rechteck-Oszillator, kurzes Hüllverhalten (für Münz-/Klick-Effekte).
+ * This function attempts to dynamically import the Tone.js library. If successful,
+ * it creates the synthesizers and registers them in the state. If an error occurs,
+ * a message is logged to the console, and the sound functionality is disabled.
  *
- * Speichert die erzeugten Instanzen unter dem Schlüssel `sounds` durch Aufruf von `updateState({ sounds })`.
+ * The following synthesizers are created and connected to the audio output:
+ * - `complete`: Sine oscillator with a fast attack and medium release, used for success sounds.
+ * - `confetti`: Triangle oscillator with a slightly longer attack/decay, used for confetti/celebration effects.
+ * - `coin`: Square oscillator with a short envelope, used for coin/click effects.
+ *
+ * The created instances are saved under the `sounds` key by calling `updateState({ sounds })`.
  */
-export function initSounds() {
-    const sounds = {
-        complete: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination(),
-        confetti: new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } }).toDestination(),
-        coin: new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination()
-    };
-    updateState({ sounds });
+export async function initSounds() {
+    try {
+        // Dynamically import the Tone.js library with a timeout
+        const importPromise = import('https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js');
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Tone.js import timed out")), 5000)
+        );
+
+        const Tone = await Promise.race([importPromise, timeoutPromise]);
+        // Create the synthesizers
+        const sounds = {
+            complete: new Tone.default.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination(),
+            confetti: new Tone.default.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } }).toDestination(),
+            coin: new Tone.default.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination()
+        };
+        // Update the application state with the created sounds
+        updateState({ sounds });
+    } catch (error) {
+        // Log an error if Tone.js could not be loaded or synthesizer creation failed
+        console.error("Tone.js could not be loaded or audio synthesizers could not be created. Audio functions are disabled.", error);
+        updateState({ sounds: {} });
+    }
 }

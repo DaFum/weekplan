@@ -1,264 +1,347 @@
-import { getState, updateState } from './state.js';
-import { updateCoinsDisplay } from './ui.js';
-import { shuffleArray } from './utils.js';
-import { quizQuestions } from './config.js';
+// Import necessary functions and data from other modules
+import { getState, updateState } from "./state.js";
+import { shuffleArray } from "./utils.js";
+import { quizQuestions } from "./config.js";
 
-let memoryCards = [];
-let memoryFlippedCards = [];
-let memoryMatchedPairs = 0;
-let memoryScore = 0;
-let currentQuizQuestion = 0;
-let quizScore = 0;
+// --- Coin Management ---
 
 /**
- * Fügt dem globalen Münzstand einen Betrag hinzu und startet kurz die Level-up-Animation der Münzanzeige.
- *
- * Aktualisiert den globalen State (coins) um `amount` und fügt dem DOM-Element mit der Klasse `.coin`
- * temporär die CSS-Klasse `level-up` hinzu (entfernt sie nach 1s).
- *
- * @param {number} amount - Anzahl der hinzuzufügenden Münzen (kann positiv oder negativ sein).
+ * Adds a specified amount of coins to the user's total.
+ * @param {number} amount - The number of coins to add.
  */
 export function addCoins(amount) {
     const { coins } = getState();
-    updateState({ coins: coins + amount });
-    document.querySelector('.coin').classList.add('level-up');
-    setTimeout(() => document.querySelector('.coin').classList.remove('level-up'), 1000);
+    const delta = Number(amount);
+    if (!Number.isFinite(delta) || delta <= 0) return;
+    const next = Math.max(0, (Number(coins) || 0) + delta);
+    updateState({ coins: next });
+
+    // Animate the coin icon
+    const coinElement = document.querySelector(".coin");
+    if (coinElement) {
+        coinElement.classList.add("level-up");
+        if (coinElement._animationTimeoutId) {
+            clearTimeout(coinElement._animationTimeoutId);
+        }
+        coinElement._animationTimeoutId = setTimeout(() => {
+            document.querySelector(".coin")?.classList.remove("level-up");
+            coinElement._animationTimeoutId = null;
+        }, 1000);
+    }
 }
 
+// --- Game Initialization and Flow ---
+
 /**
- * Initialisiert die Spiel-UI-Handler.
- *
- * Hängt die Klick-Event-Listener für den Memory-Neustart-Button ('memory-restart') und den Quiz-Weiter-Button ('quiz-next') an, sodass die entsprechenden Spielfunktionen ausgelöst werden.
+ * Initializes the games by adding event listeners to the restart and next buttons.
  */
 export function initGames() {
-    document.getElementById('memory-restart').addEventListener('click', initMemoryGame);
-    document.getElementById('quiz-next').addEventListener('click', nextQuizQuestion);
+    document.getElementById("memory-restart")?.addEventListener("click", initMemoryGame);
+    document.getElementById("quiz-next")?.addEventListener("click", nextQuizQuestion);
 }
 
 /**
- * Öffnet ein Spiel-Modal und startet das zugehörige Spiel.
- *
- * Setzt `currentGame` im globalen Zustand auf `gameName`, zeigt das passende Modal
- * ('memory-game-modal' oder 'quiz-game-modal') und initialisiert das Spiel.
- *
- * @param {string} gameName - Name des zu öffnenden Spiels; unterstützte Werte: `'memory'` oder `'quiz'`.
+ * Opens a specified game.
+ * @param {string} gameName - The name of the game to open ("memory" or "quiz").
  */
 export function openGame(gameName) {
     updateState({ currentGame: gameName });
-    if (gameName === 'memory') {
-        document.getElementById('memory-game-modal').classList.remove('hidden');
+    document.body.classList.add("modal-open");
+    if (gameName === "memory") {
+        document.getElementById("memory-game-modal")?.classList.remove("hidden");
         initMemoryGame();
-    } else if (gameName === 'quiz') {
-        document.getElementById('quiz-game-modal').classList.remove('hidden');
+    } else if (gameName === "quiz") {
+        document.getElementById("quiz-game-modal")?.classList.remove("hidden");
         initQuizGame();
     }
 }
 
 /**
- * Schließt das aktuell geöffnete Spielmodal und setzt den Spielzustand zurück.
- *
- * Versteckt das passende Modal für das in der globalen State-Variable `currentGame`
- * gespeicherte Spiel ('memory' oder 'quiz') und setzt `currentGame` anschließend auf `null`.
+ * Closes the currently active game.
  */
 export function closeGame() {
-    const { currentGame } = getState();
-    if (currentGame === 'memory') {
-        document.getElementById('memory-game-modal').classList.add('hidden');
-    } else if (currentGame === 'quiz') {
-        document.getElementById('quiz-game-modal').classList.add('hidden');
+    const { currentGame, memory } = getState();
+   if (currentGame === "memory" && memory?.checkMatchTimeoutId) {
+        clearTimeout(memory.checkMatchTimeoutId);
     }
+
+    const modalId = currentGame === "memory" ? "memory-game-modal" : "quiz-game-modal";
+    document.getElementById(modalId)?.classList.add("hidden");
     updateState({ currentGame: null });
+    // Nur entfernen, wenn keine anderen Modals offen sind
+-   const hasOtherOpen =
+-       !document.getElementById("task-modal")?.classList.contains("hidden") ||
+   const taskEl = document.getElementById("task-modal");
+   const promptEl = document.getElementById("prompt-modal");
+   const hasOtherOpen =
+       (!!taskEl && !taskEl.classList.contains("hidden")) ||
+       (!!promptEl && !promptEl.classList.contains("hidden"));
+
+    if (!hasOtherOpen) document.body.classList.remove("modal-open");
 }
 
+// --- Memory Game Logic ---
+
 /**
- * Initialisiert das Memory-Spiel: setzt Spielzustand zurück und baut das Kartenbrett auf.
- *
- * Setzt lokale Spielvariablen zurück (geöffnete Karten, gefundene Paare, Punktestand), aktualisiert die
- * Anzeige für Punktestand, Paare und Fortschrittsbalken, erzeugt ein 12-Karten-Deck aus sechs Symbolpaaren,
- * mischt die Karten und rendert für jede Karte ein DOM-Element mit zugehörigem Klick-Handler.
- *
- * Nebenwirkungen:
- * - Manipuliert DOM-Elemente mit den IDs `memory-board`, `memory-score`, `memory-pairs` und `memory-progress`.
- * - Setzt die Module-Variablen `memoryCards`, `memoryFlippedCards`, `memoryMatchedPairs` und `memoryScore`.
+ * Initializes the memory game by shuffling cards and resetting the game state.
  */
 function initMemoryGame() {
-    const board = document.getElementById('memory-board');
-    board.innerHTML = '';
-    memoryFlippedCards = [];
-    memoryMatchedPairs = 0;
-    memoryScore = 0;
-    document.getElementById('memory-score').textContent = memoryScore;
-    document.getElementById('memory-pairs').textContent = '0/6';
-    document.getElementById('memory-progress').style.width = '0%';
+    // Clear any pending match‐check timeout from a previous game
+    const { memory: prevMemory } = getState();
+    if (prevMemory?.checkMatchTimeoutId) {
+        clearTimeout(prevMemory.checkMatchTimeoutId);
+    }
 
-    const symbols = ['🎮', '🎯', '🏆', '⭐', '🚀', '🌈'];
-    memoryCards = [...symbols, ...symbols];
-    shuffleArray(memoryCards);
-
-    memoryCards.forEach((symbol, index) => {
-        const card = document.createElement('div');
-        card.className = 'memory-card bg-indigo-500 rounded-xl flex items-center justify-center text-2xl cursor-pointer transform transition-transform hover:scale-105 relative overflow-hidden';
-        card.dataset.index = index;
-        card.dataset.symbol = symbol;
-        card.innerHTML = '?';
-        card.addEventListener('click', flipCard);
-        board.appendChild(card);
+    const symbols = ["🎮", "🎯", "🏆", "⭐", "🚀", "🌈"];
+    const cards = shuffleArray([...symbols, ...symbols]);
+    updateState({
+        memory: {
+            cards: cards,
+            flippedCards: [],
+            matchedPairs: 0,
+            score: 0,
+            matchedSymbols: [],
+            checkMatchTimeoutId: null
+        }
     });
+
+    renderMemoryBoard();
 }
 
 /**
- * Behandelt einen Klick auf eine Memory-Karte: zeigt das Kartensymbol an und verwaltet den Zustand der umgedrehten Karten.
- *
- * Fügt der Karte die Klasse "flipped" hinzu, setzt ihren sichtbaren Inhalt auf das in `data-symbol` gespeicherte Symbol
- * und fügt das Karten-Element zu `memoryFlippedCards` hinzu. Ignoriert Aufrufe, wenn bereits zwei Karten umgedreht sind
- * oder die angeklickte Karte bereits den Zustand "flipped" hat. Sobald zwei Karten umgedreht sind, wird nach 500 ms
- * `checkMatch` aufgerufen, um auf Übereinstimmung zu prüfen.
+ * Flips a card in the memory game.
+ * @param {number} index - The index of the card to flip.
  */
-function flipCard() {
-    if (memoryFlippedCards.length === 2) return;
-    if (this.classList.contains('flipped')) return;
+function flipCard(index) {
+    const { memory } = getState();
+    const { flippedCards, matchedSymbols, cards } = memory;
+    if (!Array.isArray(cards) || !Number.isInteger(Number(index)) || index < 0 || index >= cards.length) {
+        return;
+    }
+    const symbol = cards[index];
 
-    this.classList.add('flipped');
-    this.innerHTML = this.dataset.symbol;
-    memoryFlippedCards.push(this);
+    // Prevent flipping more than two cards, or flipping an already flipped or matched card
+    if (flippedCards.length === 2 || flippedCards.includes(index) || matchedSymbols.includes(symbol)) {
+        return;
+    }
 
-    if (memoryFlippedCards.length === 2) {
-        setTimeout(checkMatch, 500);
+    const newFlippedCards = [...flippedCards, index];
+    updateState({ memory: { ...memory, flippedCards: newFlippedCards } });
+    renderMemoryBoard();
+
+    // If two cards are flipped, check for a match
+    if (newFlippedCards.length === 2) {
+        const { memory } = getState();
+        if (memory?.checkMatchTimeoutId) clearTimeout(memory.checkMatchTimeoutId);
+
+        const timeoutId = setTimeout(() => {
+            checkMatch();
+            updateState({ memory: { ...getState().memory, checkMatchTimeoutId: null } });
+        }, 800);
+
+        updateState({ memory: { ...memory, checkMatchTimeoutId: timeoutId } });
     }
 }
 
 /**
- * Vergleicht die beiden aktuell umgedrehten Memory-Karten und verarbeitet Treffer oder Fehlversuch.
- *
- * Wenn die Symbole übereinstimmen, erhöht die Funktion die Anzahl gefundener Paare und den Spielpunktestand,
- * aktualisiert die UI (Punktestand, Paarzähler, Fortschrittsbalken), deaktiviert weitere Klicks auf die
- * beiden Karten und markiert sie als gematcht. Beim Finden aller 6 Paare werden zusätzlich 20 Münzen
- * gutgeschrieben und der Konfetti-Sound ausgelöst.
- *
- * Bei Nichtübereinstimmung werden die beiden Karten nach einer kurzen Verzögerung wieder umgedreht und
- * ihr sichtbarer Inhalt zurück auf '?' gesetzt.
- *
- * Seiteneffekte:
- * - Verändert die Modul- bzw. Dateiliste: memoryMatchedPairs, memoryScore und memoryFlippedCards.
- * - Manipuliert DOM-Elemente: #memory-score, #memory-pairs, #memory-progress sowie die beiden Karten-Elemente.
- * - Entfernt Event-Listener von gematchten Karten oder spielt einen Sound und ruft addCoins auf.
+ * Checks if the two flipped cards match.
  */
 function checkMatch() {
-    const [card1, card2] = memoryFlippedCards;
-    if (card1.dataset.symbol === card2.dataset.symbol) {
-        memoryMatchedPairs++;
-        memoryScore += 10;
-        document.getElementById('memory-score').textContent = memoryScore;
-        document.getElementById('memory-pairs').textContent = `${memoryMatchedPairs}/6`;
-        document.getElementById('memory-progress').style.width = `${(memoryMatchedPairs / 6) * 100}%`;
+    let { memory, sounds } = getState();
+    let { flippedCards, cards, matchedPairs, score, matchedSymbols } = memory;
 
-        card1.removeEventListener('click', flipCard);
-        card2.removeEventListener('click', flipCard);
-        card1.classList.add('matched');
-        card2.classList.add('matched');
+    const [index1, index2] = flippedCards;
+    const symbol1 = cards[index1];
+    const symbol2 = cards[index2];
 
-        if (memoryMatchedPairs === 6) {
+    if (symbol1 === symbol2) {
+        // If the cards match, update the score and matched pairs
+        matchedPairs++;
+        score += 10;
+        const newMatchedSymbols = [...matchedSymbols, symbol1];
+        if (matchedPairs === cards.length / 2) {
+            // If all pairs are matched, award bonus coins and play a sound
             addCoins(20);
-            const { sounds } = getState();
-            sounds.confetti.triggerAttackRelease("C5", "0.5");
+            sounds?.confetti?.triggerAttackRelease("C5", "0.5");
         }
+        updateState({
+            memory: { ...memory, matchedPairs, score, flippedCards: [], matchedSymbols: newMatchedSymbols }
+        });
     } else {
-        setTimeout(() => {
-            card1.classList.remove('flipped');
-            card2.classList.remove('flipped');
-            card1.innerHTML = '?';
-            card2.innerHTML = '?';
-        }, 500);
+        // If the cards don't match, flip them back over
+        updateState({ memory: { ...memory, flippedCards: [] } });
     }
-    memoryFlippedCards = [];
+    renderMemoryBoard();
 }
 
 /**
- * Initialisiert das Quiz: setzt Frage- und Punktezähler zurück, aktualisiert die Anzeige und zeigt die erste Frage.
- *
- * Setzt `currentQuizQuestion` und `quizScore` auf 0, aktualisiert die Elemente `quiz-score`, `quiz-progress`
- * und `quiz-progress-bar` auf den Anfangszustand (erste von fünf Fragen, 20% Fortschritt) und ruft `showQuizQuestion()` auf.
+ * Renders the memory game board.
+ */
+function renderMemoryBoard() {
+    const { memory } = getState();
+    const { cards, flippedCards, matchedSymbols, score, matchedPairs } = memory;
+    const board = document.getElementById("memory-board");
+    if (!board) return;
+
+    // Remove any existing event listener
+    board.removeEventListener("click", handleCardClick);
+
+    board.innerHTML = "";
+    cards.forEach((symbol, index) => {
+        const card = document.createElement("div");
+        card.className = "memory-card bg-indigo-500 rounded-xl flex items-center justify-center text-2xl cursor-pointer transform transition-transform hover:scale-105";
+        card.dataset.index = index;
+
+        const isFlipped = flippedCards.includes(index);
+        const isMatched = matchedSymbols.includes(symbol);
+
+        if (isFlipped || isMatched) {
+            card.textContent = symbol;
+            card.classList.add("flipped");
+            if (isMatched) {
+                card.classList.add("matched", "bg-green-500");
+                card.style.pointerEvents = "none";
+            }
+        } else {
+            card.textContent = "?";
+        }
+        board.appendChild(card);
+    });
+
+    // Add a single delegated event listener
+    board.addEventListener("click", handleCardClick);
+
+    // Update score, pairs, and progress bar
+    const scoreEl = document.getElementById("memory-score");
+    const pairsEl = document.getElementById("memory-pairs");
+    const progressEl = document.getElementById("memory-progress");
+    
+    if (scoreEl) scoreEl.textContent = score;
+    if (pairsEl) pairsEl.textContent = `${matchedPairs}/${cards.length / 2}`;
+    if (progressEl) progressEl.style.width = `${(matchedPairs / (cards.length / 2)) * 100}%`;
+}
+
+function handleCardClick(event) {
+    const card = event.target.closest(".memory-card");
+    if (card && !card.classList.contains("matched")) {
+        const index = parseInt(card.dataset.index, 10);
+        flipCard(index);
+    }
+}
+
+
+// --- Quiz Game Logic ---
+
+/**
+ * Initializes the quiz game by shuffling questions and resetting the game state.
  */
 function initQuizGame() {
-    currentQuizQuestion = 0;
-    quizScore = 0;
-    document.getElementById('quiz-score').textContent = quizScore;
-    document.getElementById('quiz-progress').textContent = `${currentQuizQuestion + 1}/5`;
-    document.getElementById('quiz-progress-bar').style.width = '20%';
-    showQuizQuestion();
+    updateState({
+        quiz: {
+            questions: shuffleArray(quizQuestions).slice(0, 5),
+            currentQuestion: 0,
+            score: 0,
+            showResult: false
+        }
+    });
+    renderQuiz();
 }
 
 /**
- * Rendert die aktuell ausgewählte Quizfrage und ihre Antwortoptionen in der UI.
- *
- * Lädt die Frage aus `quizQuestions[currentQuizQuestion]`, setzt den Fragetext in das Element
- * mit ID `quiz-question`, baut die Antwort-Buttons im Container `quiz-options` neu auf (jedes
- * Button-Element erhält das Datenattribut `data-index`) und blendet die Schaltfläche `quiz-next` aus.
- * Diese Funktion verändert ausschließlich den DOM-Zustand und gibt nichts zurück.
+ * Checks the selected answer in the quiz game.
+ * @param {number} selectedIndex - The index of the selected answer.
  */
-function showQuizQuestion() {
-    const question = quizQuestions[currentQuizQuestion];
-    document.getElementById('quiz-question').textContent = question.question;
-    const optionsContainer = document.getElementById('quiz-options');
-    optionsContainer.innerHTML = '';
+export function checkQuizAnswer(selectedIndex) {
+    const { quiz, sounds } = getState();
+    const question = quiz.questions[quiz.currentQuestion];
+    const isCorrect = selectedIndex === question.answer;
+
+    if (isCorrect) {
+        sounds?.complete?.triggerAttackRelease("C5", "0.2");
+    }
+
+    updateState({
+        quiz: {
+            ...quiz,
+            score: isCorrect ? quiz.score + 20 : quiz.score,
+            showResult: true
+        }
+    });
+    renderQuiz(selectedIndex);
+}
+
+/**
+ * Moves to the next question in the quiz game.
+ */
+function nextQuizQuestion() {
+    let { quiz } = getState();
+    const totalQuestions = quiz.questions.length;
+
+    if (quiz.currentQuestion < totalQuestions - 1) {
+        updateState({
+            quiz: {
+                ...quiz,
+                currentQuestion: quiz.currentQuestion + 1,
+                showResult: false
+            }
+        });
+        renderQuiz();
+    } else {
+        // If it's the last question, end the game and award coins
+        addCoins(quiz.score);
+        const questionEl = document.getElementById("quiz-question");
+        const optionsEl = document.getElementById("quiz-options");
+        if (questionEl) questionEl.textContent = `Geschafft! Du hast ${quiz.score} Punkte erreicht!`;
+        if (optionsEl) {
+            while (optionsEl.firstChild) {
+                optionsEl.removeChild(optionsEl.firstChild);
+            }
+        }
+        document.getElementById("quiz-next")?.classList.add("hidden");
+    }
+}
+
+/**
+ * Renders the quiz game.
+ * @param {number|null} selectedIndex - The index of the selected answer, used to show correct/incorrect feedback.
+ */
+function renderQuiz(selectedIndex = null) {
+    const { quiz } = getState();
+    if (!quiz.questions || quiz.questions.length === 0) return;
+
+    const question = quiz.questions[quiz.currentQuestion];
+    const questionEl = document.getElementById("quiz-question");
+    const optionsContainer = document.getElementById("quiz-options");
+    if (!questionEl || !optionsContainer) return;
+    questionEl.textContent = question.question;
+    optionsContainer.innerHTML = "";
 
     question.options.forEach((option, index) => {
-        const button = document.createElement('button');
-        button.className = 'quiz-option w-full text-left p-3 bg-accent rounded-lg hover:bg-indigo-200 transition relative overflow-hidden';
+        const button = document.createElement("button");
+        button.className = "quiz-option w-full text-left p-3 bg-accent rounded-lg hover:bg-indigo-200 transition";
         button.textContent = option;
         button.dataset.index = index;
+
+        if (quiz.showResult) {
+            button.disabled = true;
+            if (index === question.answer) {
+                button.classList.add("bg-green-200", "text-black");
+            } else if (index === selectedIndex) {
+                button.classList.add("bg-red-200", "text-black");
+            }
+        } else {
+            button.addEventListener("click", () => checkQuizAnswer(index));
+        }
+
         optionsContainer.appendChild(button);
     });
 
-    document.getElementById('quiz-next').classList.add('hidden');
-}
+    // Update score, progress, and progress bar
+    const totalQuestions = quiz.questions.length;
+    document.getElementById("quiz-score")?.textContent = quiz.score;
+    document.getElementById("quiz-progress")?.textContent = `${quiz.currentQuestion + 1}/${totalQuestions}`;
+    document.getElementById("quiz-progress-bar")?.style.width = `${((quiz.currentQuestion + 1) / totalQuestions) * 100}%`;
 
-/**
- * Überprüft die gewählte Antwort für die aktuelle Quizfrage, aktualisiert Punktestand und UI.
- *
- * Markiert die richtige Antwort grün und die falsch gewählte Antwort rot (falls zutreffend),
- * erhöht bei richtiger Auswahl den `quizScore` um 20, aktualisiert die Punktezählanzeige,
- * spielt den Abschluss-Sound und zeigt die "Weiter"-Schaltfläche an.
- *
- * @param {number} selectedIndex - Index der vom Spieler gewählten Antwortoption (0-basiert).
- */
-export function checkQuizAnswer(selectedIndex) {
-    const question = quizQuestions[currentQuizQuestion];
-    const options = document.querySelectorAll('#quiz-options button');
-
-    options[question.answer].classList.add('bg-green-200');
-    if (selectedIndex !== question.answer) {
-        options[selectedIndex].classList.add('bg-red-200');
-    }
-
-    if (selectedIndex === question.answer) {
-        quizScore += 20;
-        document.getElementById('quiz-score').textContent = quizScore;
-        const { sounds } = getState();
-        sounds.complete.triggerAttackRelease("C5", "0.2");
-    }
-
-    document.getElementById('quiz-next').classList.remove('hidden');
-}
-
-/**
- * Geht zur nächsten Quizfrage oder schließt das Quiz ab.
- *
- * Erhöht den internen Frageindex, aktualisiert Fortschrittstext und Fortschrittsbalken,
- * zeigt die nächste Frage (showQuizQuestion) oder — wenn keine Fragen mehr verbleiben —
- * schreibt eine Abschlussnachricht, leert die Antwortoptionen, blendet den "Weiter"-Button aus
- * und vergibt die gesammelten Quiz-Punkte als Münzen (addCoins).
- */
-function nextQuizQuestion() {
-    currentQuizQuestion++;
-    if (currentQuizQuestion < quizQuestions.length) {
-        document.getElementById('quiz-progress').textContent = `${currentQuizQuestion + 1}/5`;
-        document.getElementById('quiz-progress-bar').style.width = `${((currentQuizQuestion + 1) / quizQuestions.length) * 100}%`;
-        showQuizQuestion();
-    } else {
-        addCoins(quizScore);
-        document.getElementById('quiz-question').textContent = `Geschafft! Du hast ${quizScore} Punkte erreicht!`;
-        document.getElementById('quiz-options').innerHTML = '';
-        document.getElementById('quiz-next').classList.add('hidden');
-    }
+    // Show/hide the "Next Question" button
+    document.getElementById("quiz-next")?.classList.toggle("hidden", !quiz.showResult);
 }

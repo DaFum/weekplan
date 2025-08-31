@@ -1,49 +1,101 @@
-import { wochentage } from './config.js';
+// Import the weekdays array from the config file
+import { wochentage } from "./config.js";
 
-export const getISODate = (date) => date.toISOString().split('T')[0];
+/**
+ * Gets the ISO date string (YYYY-MM-DD) from a Date object.
+ * @param {Date} date - The date to format.
+ * @returns {string} The ISO date string.
+ */
+export const getISODate = (date) => {
+    const d = new Date(date);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+};
 
+/**
+ * Gets the start of the week for a given date.
+ * @param {Date} date - The date to get the start of the week for.
+ * @returns {Date} The date of the start of the week.
+ */
 export const getStartOfWeek = (date) => {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
     d.setHours(0, 0, 0, 0);
     return new Date(d.setDate(diff));
 };
 
-export const formatDisplayDate = (date) => `${wochentage[date.getDay()]}, ${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+/**
+ * Formats a date for display purposes.
+ * @param {Date} date - The date to format.
+ * @returns {string} The formatted date string (e.g., "Montag, 01.01").
+ */
+export const formatDisplayDate = (date) => `${wochentage[date.getDay()]}, ${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}`;
 
+/**
+ * Adds a specified number of days to a date.
+ * @param {Date} date - The date to add days to.
+ * @param {number} days - The number of days to add.
+ * @returns {Date} The new date.
+ */
+export const addDays = (date, days) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+};
+
+/**
+ * Formats a number of minutes into a string (e.g., "1 Std 30 Min").
+ * @param {number} minutes - The number of minutes to format.
+ * @returns {string} The formatted time string.
+ */
 export const formatMinutes = (minutes) => {
-    if (minutes < 0) minutes = 0;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
+    const positiveMinutes = Math.max(0, minutes);
+    const h = Math.floor(positiveMinutes / 60);
+    const m = positiveMinutes % 60;
     return `${h} Std ${m} Min`;
 };
 
 /**
- * Mischt ein Array in-place mit dem Fisher–Yates-Algorithmus.
+ * Creates a shuffled copy of an array using the Fisher-Yates algorithm.
  *
- * Das übergebene Array wird zufällig permutiert (Mutation des Eingabe-Arrays). Verwendet Math.random(), liefert daher nicht-deterministische Ergebnisse.
+ * The passed array remains unchanged; a new, randomly permuted copy is returned.
+ * Uses Math.random(), so the results are non-deterministic.
  *
- * @param {Array<any>} array - Das zu mischende Array; Elemente beliebigen Typs.
+ * @param {Array<any>} array - The array to be shuffled; elements of any type.
+ * @returns {Array<any>} A new, shuffled array.
  */
 export function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+    if (!array || !Array.isArray(array)) {
+        return [];
     }
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
 }
 
 /**
- * Escapiert spezielle Zeichen in einer Eingabe für sichere Einbettung in HTML.
- *
- * Wandelt den übergebenen Wert in einen String und ersetzt die Zeichen
- * &, <, >, " und ' durch ihre HTML-Entities (&amp;, &lt;, &gt;, &quot;, &#39;).
- *
- * @param {any} str - Beliebiger Wert; wird per String() in einen String konvertiert.
- * @returns {string} Der HTML-escaped String.
+ * Returns a debounced version of the given function that delays its invocation until after
+ * wait milliseconds have elapsed since the last time it was invoked.
+ * @param {Function} func - The function to debounce.
+ * @param {number} wait - The number of milliseconds to delay.
+ * @returns {Function} The debounced function.
  */
-export function escapeHTML(str) {
-    return String(str).replace(/[&<>\"']/g, (ch) => (
-        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
-    ));
+export function debounce(func, wait) {
+    let timeout;
+    function debounced(...args) {
+        const later = () => {
+            timeout = null;
+            func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    }
+    debounced.cancel = () => { clearTimeout(timeout); timeout = null; };
+    return debounced;
 }

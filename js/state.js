@@ -1,50 +1,67 @@
-const state = {
-    tasks: [],
-    aktiveWoche: 0,
-    pcStundenGesamt: 0,
-    wochenZiel: 10,
-    sounds: {},
-    promptCallback: null,
-    coins: 0,
-    currentGame: null,
-    theme: 'light'
+// The initial state of the application
+let state = {
+    tasks: [], // Array of tasks
+    aktiveWoche: 0, // The currently active week
+    pcStundenGesamt: 0, // Total PC hours
+    wochenZiel: 10, // Weekly goal
+    sounds: {}, // Sound objects
+    promptCallback: null, // Callback for the prompt modal
+    coins: 0, // Number of coins
+    currentGame: null, // The currently active game
+    theme: "light", // The current theme
+    audioInitialized: false,
+
+    // Game state
+    memory: {
+        cards: [],
+        flippedCards: [],
+        matchedPairs: 0,
+        score: 0,
+        matchedSymbols: [],
+        checkMatchTimeoutId: null
+    },
+    quiz: {
+        currentQuestion: 0,
+        score: 0,
+        questions: []
+    }
 };
 
+// Array to store listeners for state changes
 const listeners = [];
+let nextListenerId = 0;
 
 /**
- * Gibt eine flache Kopie des internen Zustands zurück.
- *
- * Liefert ein neues Objekt mit den aktuellen State-Feldern (shallow copy), damit Aufrufer den internen Zustand nicht direkt mutieren.
- * Änderungen am State müssen über die dafür vorgesehenen Funktionen vorgenommen werden.
- * @returns {Object} Eine flache Kopie des aktuellen State-Objekts.
+ * Returns a copy of the current state.
+ * @returns {Object} The current state.
  */
 export function getState() {
-    return { ...state };
+    return typeof structuredClone === 'function'
+        ? structuredClone(state)
+        : JSON.parse(JSON.stringify(state));
 }
 
 /**
- * Aktualisiert den internen Zustand mit den angegebenen Eigenschaften und benachrichtigt alle Abonnenten.
- *
- * Führt eine flache Zusammenführung der übergebenen `newState`-Eigenschaften in das Modul-Scoped `state` durch
- * (vorhandene Felder werden überschrieben) und löst anschließend die Registrierungscallbacks aus.
- *
- * @param {Object} newState - Teilobjekt mit Zustandsfeldern, die hinzugefügt oder überschrieben werden sollen.
+ * Updates the internal state and notifies subscribers whose subscribed state parts have changed.
+ * @param {Object} newState - An object with the keys to be updated.
  */
 export function updateState(newState) {
-    Object.assign(state, newState);
-    notifyListeners();
+    const oldState = { ...state };
+    state = { ...state, ...newState };
+    notifyListeners(newState, oldState);
 }
 
 /**
- * Registriert einen Listener, der bei Zustandsänderungen benachrichtigt wird, und liefert eine Funktion zum Abbestellen.
- * @param {function(Object):void} listener - Callback, das die aktuelle (flache) Zustandkopie als Argument erhält.
- * @return {function():void} Funktion, die beim Aufruf die Registrierung des Listeners entfernt.
+ * Registers a listener for changes to a specific part of the state.
+ * @param {string|null} key - The key in the state to listen to. If null, the listener is called on any change.
+ * @param {function(Object):void} callback - The function to be called on change.
+ * @returns {function():void} A function to unsubscribe.
  */
-export function subscribe(listener) {
-    listeners.push(listener);
-    return function unsubscribe() {
-        const index = listeners.indexOf(listener);
+export function subscribe(key, callback) {
+    const id = nextListenerId++;
+    listeners.push({ id, key, callback });
+    return () => {
+        const index = listeners.findIndex(l => l.id === id);
         if (index > -1) {
             listeners.splice(index, 1);
         }
@@ -52,13 +69,24 @@ export function subscribe(listener) {
 }
 
 /**
- * Benachrichtigt alle registrierten Listener synchron mit dem aktuellen State.
- *
- * Ruft jeden in der internen `listeners`-Liste gespeicherten Listener auf und übergibt ihm eine Kopie des aktuellen Zustands (via `getState()`).
- * Aufruf erfolgt synchron; Exceptions, die von einem Listener geworfen werden, werden nicht abgefangen und propagieren weiter.
+ * Notifies listeners whose subscribed data has changed.
+ * @param {Object} newState - The object with the new state values.
+ * @param {Object} oldState - The object with the old state values.
  */
-function notifyListeners() {
-    for (const listener of listeners) {
-        listener(getState());
-    }
+function notifyListeners(newState, oldState) {
+    // Determine which keys have changed
+    const changedKeys = Object.keys(newState).filter(key => newState[key] !== oldState[key]);
+
+    if (changedKeys.length === 0) return;
+
+    listeners.forEach(({ key, callback }) => {
+        // Notify global listeners (key === null) or listeners for changed keys
+        if (key === null || changedKeys.includes(key)) {
+            try {
+                callback(state);
+            } catch (e) {
+                console.error(`Error in listener for key "${key}":`, e);
+            }
+        }
+    });
 }
