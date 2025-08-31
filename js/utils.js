@@ -67,6 +67,7 @@ export const formatMinutes = (minutes) => {
  * @param {Array<any>} array - The array to be shuffled; elements of any type.
  * @returns {Array<any>} A new, shuffled array.
  */
+export function shuffleArray(array) {
     if (!Array.isArray(array)) {
         return [];
     }
