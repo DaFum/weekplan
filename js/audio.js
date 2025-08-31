@@ -1,5 +1,5 @@
-// Import the updateState function from the state module
-import { updateState } from './state.js';
+// Import state helpers
+import { getState, updateState } from './state.js';
 
 /**
  * Initializes three simple Tone.Synth instruments and registers them in the application state.
@@ -16,15 +16,18 @@ import { updateState } from './state.js';
  * The created instances are saved under the `sounds` key by calling `updateState({ sounds })`.
  */
 export async function initSounds() {
+    const { sounds: existingSounds = {}, audioInitialized = false } = getState();
+    if (audioInitialized || Object.keys(existingSounds).length > 0) return;
+
     let Tone;
     try {
-        // Try to dynamically import the Tone.js module with a timeout
-        const importPromise = import('https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js');
+        // Prefer ESM build; fallback handled below if this fails
+        const importPromise = import('https://esm.sh/tone@14');
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error("Tone.js import timed out")), 5000)
         );
-        const module = await Promise.race([importPromise, timeoutPromise]);
-        Tone = module?.default || module?.Tone || module;
+        const mod = await Promise.race([importPromise, timeoutPromise]);
+        Tone = mod?.default ?? mod?.Tone ?? mod;
     } catch (error) {
         console.warn("Tone.js dynamic import failed, falling back to script tag.", error);
         Tone = null;
@@ -35,7 +38,7 @@ export async function initSounds() {
         try {
             Tone = await new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js';
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js';
                 script.async = true;
                 const cleanup = () => {
                   if (script.parentNode) {
@@ -59,11 +62,15 @@ export async function initSounds() {
             });
         } catch (error) {
             console.error('Tone.js could not be loaded or audio synthesizers could not be created. Audio functions are disabled.', error);
-            updateState({ sounds: {} });
+            updateState({ sounds: {}, audioInitialized: false });
             return;
         }
     }
 
+    // Dispose any existing synths before creating new ones
+    for (const key of Object.keys(existingSounds)) {
+        try { existingSounds[key]?.dispose?.(); } catch {}
+    }
 
     // Create the synthesizers
     const sounds = {
@@ -73,5 +80,5 @@ export async function initSounds() {
     };
 
     // Update the application state with the created sounds
-    updateState({ sounds });
+    updateState({ sounds, audioInitialized: true });
 }
