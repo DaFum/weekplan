@@ -34,12 +34,14 @@ jobs:
         run: |
           git fetch origin ${{ github.base_ref }}
           git diff origin/${{ github.base_ref }}...HEAD > pr_diff_full.txt
-          # Gemini API accepts up to ~120kB payloads per request
-          MAX_DIFF_BYTES=120000
-          head -c $MAX_DIFF_BYTES pr_diff_full.txt > pr_diff.txt
+          # Gemini API accepts up to ~256kB payloads per request
+          MAX_DIFF_BYTES=256000
           if [ $(wc -c < pr_diff_full.txt) -gt $MAX_DIFF_BYTES ]; then
-            echo "::warning::Diff truncated to $MAX_DIFF_BYTES bytes" >&2
+            echo "::error::Diff exceeds ${MAX_DIFF_BYTES} bytes" >&2
+            echo "::error::Skipping review" >&2
+            exit 1
           fi
+          head -c $MAX_DIFF_BYTES pr_diff_full.txt > pr_diff.txt
 
       - name: Run Gemini review
         id: gemini_run
