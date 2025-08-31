@@ -417,7 +417,7 @@ function createTaskElement(task) {
 
     const nameDiv = document.createElement("div");
     nameDiv.className = "task-name";
-    nameDiv.textContent = String(task.name ?? "");
+    nameDiv.textContent = task.name ?? "";
     contentDiv.appendChild(nameDiv);
 
     const metaDiv = document.createElement("div");
