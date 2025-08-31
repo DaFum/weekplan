@@ -16,7 +16,6 @@
 #    - Fix: Job-level permissions missing contents: read causing checkout failures.
 #    - Fix: Potential shallow-history merge-base issues by using fetch-depth: 0.
 #
-# Compliment: Crafted with precision by Copilot—always on point.
 # =============================================================================
 
 name: Gemini PR Automation
