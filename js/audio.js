@@ -37,23 +37,25 @@ export async function initSounds() {
                 const script = document.createElement('script');
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js';
                 script.async = true;
-                script.onload = () => resolve(window.Tone);
-                script.onerror = () => reject(new Error('Tone.js script failed to load'));
-                const timeoutId = setTimeout(() => {
-                  document.head.removeChild(script);
-                  reject(new Error('Tone.js script load timed out'));
-                }, 5000);
-                script.onload = () => {
+                const cleanup = () => {
+                  if (script.parentNode) {
+                    document.head.removeChild(script);
+                  }
                   clearTimeout(timeoutId);
-                  document.head.removeChild(script);
+                };
+                script.onload = () => {
+                  cleanup();
                   resolve(window.Tone);
                 };
                 script.onerror = () => {
-                  clearTimeout(timeoutId);
-                  document.head.removeChild(script);
+                  cleanup();
                   reject(new Error('Tone.js script failed to load'));
                 };
-                setTimeout(() => reject(new Error('Tone.js script load timed out')), 5000);
+                const timeoutId = setTimeout(() => {
+                  cleanup();
+                  reject(new Error('Tone.js script load timed out'));
+                }, 5000);
+                document.head.appendChild(script);
             });
         } catch (error) {
             console.error('Tone.js could not be loaded or audio synthesizers could not be created. Audio functions are disabled.', error);
