@@ -121,7 +121,15 @@ export function toggleTask(taskId) {
             const newErledigt = !wasErledigt;
             if (newErledigt) {
                 // Guard against uninitialized sounds or complete before calling
-                sounds?.complete?.triggerAttackRelease?.("C4", "0.2");
+                if (
+                    sounds &&
+                    sounds.complete &&
+                    typeof sounds.complete.triggerAttackRelease === "function"
+                ) {
+                    sounds.complete.triggerAttackRelease("C4", "0.2");
+                } else {
+                    console.warn("Completion sound is not properly initialized.");
+                }
                 starteKonfetti();
                 addCoins(5);
             }
