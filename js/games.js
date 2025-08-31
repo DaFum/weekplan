@@ -60,24 +60,20 @@ export function openGame(gameName) {
  * Closes the currently active game.
  */
 export function closeGame() {
-    const { currentGame, memory } = getState();
-   if (currentGame === "memory" && memory?.checkMatchTimeoutId) {
-        clearTimeout(memory.checkMatchTimeoutId);
-    }
+  const { currentGame, memory } = getState();
+  if (currentGame === "memory" && memory?.checkMatchTimeoutId) {
+      clearTimeout(memory.checkMatchTimeoutId);
+  }
 
-    const modalId = currentGame === "memory" ? "memory-game-modal" : "quiz-game-modal";
-    document.getElementById(modalId)?.classList.add("hidden");
-    updateState({ currentGame: null });
-    // Nur entfernen, wenn keine anderen Modals offen sind
--   const hasOtherOpen =
--       !document.getElementById("task-modal")?.classList.contains("hidden") ||
-   const taskEl = document.getElementById("task-modal");
-   const promptEl = document.getElementById("prompt-modal");
-   const hasOtherOpen =
-       (!!taskEl && !taskEl.classList.contains("hidden")) ||
-       (!!promptEl && !promptEl.classList.contains("hidden"));
-
-    if (!hasOtherOpen) document.body.classList.remove("modal-open");
+  const modalId = currentGame === "memory" ? "memory-game-modal" : "quiz-game-modal";
+  document.getElementById(modalId)?.classList.add("hidden");
+  updateState({ currentGame: null });
+  const taskEl = document.getElementById("task-modal");
+  const promptEl = document.getElementById("prompt-modal");
+  const stillOpen =
+      (!!taskEl && !taskEl.classList.contains("hidden")) ||
+      (!!promptEl && !promptEl.classList.contains("hidden"));
+  if (!stillOpen) document.body.classList.remove("modal-open");
 }
 
 // --- Memory Game Logic ---
