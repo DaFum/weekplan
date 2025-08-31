@@ -26,8 +26,10 @@ export function getCurrentStreak(tasks) {
     const erledigteTage = new Set(tasks.filter(t => t.erledigt).map(t => t.date));
     if (erledigteTage.size === 0) return 0;
 
+    // Lokale Mitternacht verwenden, damit getISODate (lokal) konsistent ist
+    let cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
     let streak = 0;
-    cursor.setUTCHours(0, 0, 0, 0);
 
     // If no tasks completed today, check if yesterday had completed tasks
     const today = getISODate(cursor);
