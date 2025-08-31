@@ -62,10 +62,11 @@ jobs:
             printf 'Raw output: %s\n' "$output" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
             exit $status
+          else
+            echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
+            echo "$output" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
           fi
-          echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-          echo "$output" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Verify Gemini output
         env:
