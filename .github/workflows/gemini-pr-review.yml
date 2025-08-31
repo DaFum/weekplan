@@ -95,8 +95,8 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number,
-              body
+              issue_number: issue_number,
+              body: body
             });
 
       - name: Post PR review as comment (if needed)
@@ -111,7 +111,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number,
+              issue_number: issue_number,
               body: ':warning: Gemini review failed. See the Actions tab for details: '
-                + `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                + '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
             });
