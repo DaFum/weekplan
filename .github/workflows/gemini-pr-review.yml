@@ -32,17 +32,17 @@ jobs:
 
       - name: Generate PR diff
         run: |
-          git fetch origin ${{ github.base_ref }}
-          git diff origin/${{ github.base_ref }}...HEAD > pr_diff_full.txt
+          git fetch --no-tags --prune --depth=0 origin ${{ github.base_ref }}
+          BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+          git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
           # Gemini API accepts up to ~256kB payloads per request
           MAX_DIFF_BYTES=256000
-          if [ $(wc -c < pr_diff_full.txt) -gt $MAX_DIFF_BYTES ]; then
+          if [ "$(wc -c < pr_diff_full.txt)" -gt "$MAX_DIFF_BYTES" ]; then
             echo "::error::Diff exceeds ${MAX_DIFF_BYTES} bytes" >&2
             echo "::error::Skipping review" >&2
             exit 1
           fi
           head -c $MAX_DIFF_BYTES pr_diff_full.txt > pr_diff.txt
-
       - name: Run Gemini review
         id: gemini_run
         env:
