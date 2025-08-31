@@ -23,12 +23,32 @@ jobs:
           npm install --silent --no-audit --prefer-offline \
             --global @google/gemini-cli@0.1.12
 
+yaml
       - name: Check for required secrets
+        id: check_secrets
         run: |
           if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
-            echo "::error::GEMINI_API_KEY secret is not configured."
-            exit 1
+            echo "::notice::GEMINI_API_KEY secret is not configured. Skipping AI review."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Run Gemini review
+        if: steps.check_secrets.outputs.skip != 'true'
+        # … existing run/tests for the Gemini review …
+
+      - name: Verify Gemini output
+        if: steps.check_secrets.outputs.skip != 'true'
+        # … existing verification logic …
+
+      - name: Post PR Review Comment
+        if: steps.check_secrets.outputs.skip != 'true'
+        # … existing comment-posting logic …
+
+      - name: Post PR review as comment (if needed)
+        if: failure() && steps.check_secrets.outputs.skip != 'true'
+        # … existing conditional comment-on-failure logic …
 
       - name: Generate PR diff
         run: |
