@@ -83,9 +83,7 @@ jobs:
               const issue_number = context.payload.pull_request
                 ? context.payload.pull_request.number
                 : context.issue.number;
-              const raw = JSON.parse(
-                ${{ toJson(steps.gemini_run.outputs.gemini_response) }}
-              );
+              const raw = ${{ toJson(steps.gemini_run.outputs.gemini_response) }};
               const MAX = 65000;
               const trunc = "\n\n…[truncated]";
               const body = raw.length > MAX
