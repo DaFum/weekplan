@@ -338,9 +338,12 @@ function renderQuiz(selectedIndex = null) {
 
     // Update score, progress, and progress bar
     const totalQuestions = quiz.questions.length;
-    document.getElementById("quiz-score")?.textContent = quiz.score;
-    document.getElementById("quiz-progress")?.textContent = `${quiz.currentQuestion + 1}/${totalQuestions}`;
-    document.getElementById("quiz-progress-bar")?.style.width = `${((quiz.currentQuestion + 1) / totalQuestions) * 100}%`;
+    const scoreEl = document.getElementById("quiz-score");
+    if (scoreEl) scoreEl.textContent = String(quiz.score);
+    const progTextEl = document.getElementById("quiz-progress");
+    if (progTextEl) progTextEl.textContent = `${quiz.currentQuestion + 1}/${totalQuestions}`;
+    const progBarEl = document.getElementById("quiz-progress-bar");
+    if (progBarEl) progBarEl.style.width = `${((quiz.currentQuestion + 1) / totalQuestions) * 100}%`;
 
     // Show/hide the "Next Question" button
     document.getElementById("quiz-next")?.classList.toggle("hidden", !quiz.showResult);
