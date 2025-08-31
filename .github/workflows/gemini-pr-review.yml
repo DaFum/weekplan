@@ -92,8 +92,9 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number,
-                body
-              });
+                  with:
+                    github-token: ${{ secrets.GITHUB_TOKEN }}
+                    script: |
 
       - name: Post PR review as comment (if needed)
         if: failure()
