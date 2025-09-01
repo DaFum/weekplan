@@ -96,7 +96,7 @@ export async function initSounds() {
         audioInitializing = false
     } = getState();
 
-    if (audioInitialized || audioInitializing) return;
+    if (audioInitialized || audioInitializing || Object.keys(existingSounds).length > 0) return;
     updateState({ audioInitializing: true });
 
     disposeSounds(existingSounds);
