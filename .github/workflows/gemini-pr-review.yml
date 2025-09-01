@@ -101,9 +101,7 @@ jobs:
             cat "$file"
             echo "--- DIFF CONTENT END ---"
             # Enhanced: Add context prompt for Gemini
-            prompt="You're reviewing a pull request diff chunk from a GitHub repository. Focus your review on this chunk, as you may not have full file context. If additional context is needed, state which files or lines would help, but still provide any feedback possible for the given changes.
-
-Diff chunk follows:"
+            prompt="You're reviewing a pull request diff chunk from a GitHub repository. Focus your review on this chunk, as you may not have full file context. If additional context is needed, state which files or lines would help, but still provide any feedback possible for the given changes. Diff chunk follows:"
             if ! output=$(gemini review --prompt "$prompt" < "$file" 2>&1 |
               sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
               status=$?
