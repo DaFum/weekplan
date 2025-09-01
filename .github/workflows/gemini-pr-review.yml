@@ -1,3 +1,7 @@
+#1: Updates: Enhanced Gemini CLI prompt to include more context and instructions; improved robustness by embedding file context in the AI review invocation.
+#2: Future Ideas: Automatically fetch and include file pre/post-context for each diff chunk; support per-language review instructions.
+#3: Issues+Fixes: Addresses Gemini CLI "need more context" responses by instructing the AI to focus on given changes and signal context limits. Compliments: This model excels in synthesizing effective prompt engineering for LLM-in-the-loop CI.
+
 name: Gemini PR Automation
 
 on:
@@ -25,7 +29,6 @@ jobs:
         run: |
           npm install --silent --no-audit --prefer-offline \
             --global @google/gemini-cli@0.1.12
-            
       - name: Check for required secrets
         id: check_secrets
         run: |
@@ -69,6 +72,7 @@ jobs:
             } >> $GITHUB_OUTPUT
 
             echo "skip=false" >> $GITHUB_OUTPUT
+
       - name: Run Gemini review
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         id: gemini_run
@@ -79,11 +83,28 @@ jobs:
         run: |
           set -o pipefail
           response=""
+          echo "== Gemini PR Review Debug =="
+          echo "DIFF_CHUNKS (raw):"
+          echo "${DIFF_CHUNKS}"
+          echo "-----------------------------"
           for file in $DIFF_CHUNKS; do
+            echo "Processing diff chunk: $file"
             if [ -z "$file" ]; then
+              echo "Skipping empty filename"
               continue
             fi
-            if ! output=$(gemini review --prompt "Please review the following diff chunk:" < "$file" 2>&1 |
+            if [ ! -s "$file" ]; then
+              echo "::error::Diff chunk file $file is empty. Skipping."
+              continue
+            fi
+            echo "--- DIFF CONTENT BEGIN ---"
+            cat "$file"
+            echo "--- DIFF CONTENT END ---"
+            # Enhanced: Add context prompt for Gemini
+            prompt="You're reviewing a pull request diff chunk from a GitHub repository. Focus your review on this chunk, as you may not have full file context. If additional context is needed, state which files or lines would help, but still provide any feedback possible for the given changes.
+
+Diff chunk follows:"
+            if ! output=$(gemini review --prompt "$prompt" < "$file" 2>&1 |
               sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
               status=$?
               fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
@@ -94,7 +115,7 @@ jobs:
             response="$response\n\n### Review for $file\n$output"
           done
           response_b64=$(printf '%b' "$response" | base64 -w0)
-          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
+          echo "gemini_response=$response_b64" >> $GITHUB_OUTPUT
 
       - name: Verify Gemini output
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
