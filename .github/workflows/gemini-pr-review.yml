@@ -63,7 +63,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -o pipefail
-          prompt="You are reviewing the complete pull request diff (including all file changes and history) for a GitHub repository. Provide a detailed code review. If additional context is needed, specify which files or lines. Begin your review below."
+          prompt="You are reviewing the complete pull request diff (including all file changes and history) for a GitHub repository. Focus on identifying potential bugs, security issues, and code quality concerns. Structure your review with clear section headers (## Findings, ## Suggestions) and use markdown formatting. If additional context is needed, specify which files or lines. Begin your review below."
           echo "--- DIFF CONTENT BEGIN ---"
           cat pr_diff_full.txt
           echo "--- DIFF CONTENT END ---"
