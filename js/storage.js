@@ -59,10 +59,10 @@ export function saveData(state) {
 /**
  * Loads persisted application data from local storage.
  *
- * Bei fehlenden Daten oder JSON-Fehlern wird ein normalisiertes Objekt mit Default-Werten
- * (z. B. `tasks: []`, `pcStundenGesamt: 0`, `wochenZiel: 10`, `coins: 0`) zurückgegeben.
+ * If no data is found or if a JSON error occurs, a normalized object with default values
+ * (e.g., `tasks: []`, `pcStundenGesamt: 0`, `wochenZiel: 10`, `coins: 0`, `theme: 'light'`) is returned.
  *
- * @returns {Object} Normalisiertes Datenobjekt (immer mit Default-Feldern befüllt).
+ * @returns {Object} Normalized data object (always populated with default fields).
  */
 export function loadData() {
     let data = {};
