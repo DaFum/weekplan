@@ -68,9 +68,13 @@ export async function initSounds() {
         }
     }
 
-    // Dispose any existing synths before creating new ones
-    for (const key of Object.keys(existingSounds)) {
-        try { existingSounds[key]?.dispose?.(); } catch {}
+for (const key of Object.keys(existingSounds)) {
+    try { 
+        existingSounds[key]?.dispose?.(); 
+    } catch (error) {
+        console.warn(`Failed to dispose synth "${key}":`, error);
+    }
+}
     }
 
     // Create the synthesizers
