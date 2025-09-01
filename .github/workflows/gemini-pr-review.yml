@@ -77,13 +77,13 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DIFF_CHUNKS: ${{ steps.diff_check.outputs.chunks }}
         run: |
+          set -o pipefail
           response=""
           for file in $DIFF_CHUNKS; do
             if [ -z "$file" ]; then
               continue
             fi
-            if ! output=$(gemini review --diff-file "$file" \
-              --prompt "Please review the following diff chunk:" 2>&1 |
+            if ! output=$(gemini review --prompt "Please review the following diff chunk:" < "$file" 2>&1 |
               sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
               status=$?
               fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
