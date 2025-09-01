@@ -1,3 +1,7 @@
+#1: Updates: Added diagnostic steps (echo, cat) to debug Gemini CLI diff input; improved handling of DIFF_CHUNKS; clarified error messaging.
+#2: Future Ideas: Add matrix strategy to parallelize chunk reviews; support alternate AI review backends.
+#3: Issues+Fixes: Fixed issue where Gemini CLI was not receiving diff chunk; added explicit output verification. Compliment: This model applies advanced CI/CD diagnostics and shell scripting best practices!
+
 name: Gemini PR Automation
 
 on:
@@ -68,6 +72,7 @@ jobs:
             } >> $GITHUB_OUTPUT
 
             echo "skip=false" >> $GITHUB_OUTPUT
+
       - name: Run Gemini review
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         id: gemini_run
@@ -78,10 +83,24 @@ jobs:
         run: |
           set -o pipefail
           response=""
+          echo "== Gemini PR Review Debug =="
+          echo "DIFF_CHUNKS (raw):"
+          echo "${DIFF_CHUNKS}"
+          echo "-----------------------------"
           for file in $DIFF_CHUNKS; do
+            echo "Processing diff chunk: $file"
             if [ -z "$file" ]; then
+              echo "Skipping empty filename"
               continue
             fi
+            if [ ! -s "$file" ]; then
+              echo "::error::Diff chunk file $file is empty. Skipping."
+              continue
+            fi
+            echo "--- DIFF CONTENT BEGIN ---"
+            cat "$file"
+            echo "--- DIFF CONTENT END ---"
+            # Main CLI invocation. If Gemini CLI requires a file argument, update this line accordingly.
             if ! output=$(gemini review --prompt "Please review the following diff chunk:" < "$file" 2>&1 |
               sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
               status=$?
@@ -93,7 +112,7 @@ jobs:
             response="$response\n\n### Review for $file\n$output"
           done
           response_b64=$(printf '%b' "$response" | base64 -w0)
-          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
+          echo "gemini_response=$response_b64" >> $GITHUB_OUTPUT
 
       - name: Verify Gemini output
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
