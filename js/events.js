@@ -64,15 +64,21 @@ export function initEventListeners() {
         const navButton = target.closest(".nav-button");
         if (navButton) {
             showWoche(parseInt(navButton.dataset.weekIndex, 10));
-        }
+            if (navButton) {
+                const idx = parseInt(navButton.dataset.weekIndex, 10);
+                if (Number.isFinite(idx)) {
+                    showWoche(idx);
+                }
+            }
 
-        // Handle quiz answer selection
-        const quizOption = target.closest(".quiz-option");
-        if (quizOption) {
-            checkQuizAnswer(parseInt(quizOption.dataset.index, 10));
-        }
-
-        // Apply ripple effect to buttons
+            // Handle quiz answer selection
+            const quizOption = target.closest(".quiz-option");
+            if (quizOption) {
+                const ansIdx = parseInt(quizOption.dataset.index, 10);
+                if (Number.isFinite(ansIdx)) {
+                    checkQuizAnswer(ansIdx);
+                }
+            }
         const btn = event.target.closest("button");
         if (btn && !btn.disabled) createRipple(btn, event);
     });
