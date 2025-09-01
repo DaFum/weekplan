@@ -116,7 +116,7 @@ jobs:
           set -o pipefail
 
           ADV_PROMPT=$(cat <<'PROMPT'
-[role: Senior Staff Engineer | Principal Reviewer]
+[role Senior Staff Engineer | Principal Reviewer]
 You are performing a rigorous code review for this pull request.
 
 OBJECTIVES
@@ -130,7 +130,7 @@ The stdin begins with "Review context" (PR metadata, commit history, changed fil
 GUIDELINES
 - Base your analysis strictly on the provided input; do not assume external code.
 - Reference files and line ranges from the diff (e.g., path/to/file:123-145).
-- Assign a severity to each issue: [critical|major|minor|nit].
+- Assign a severity to each issue [critical|major|minor|nit].
 - Prioritize issues that affect correctness, security, or performance.
 - Where helpful, include patch-style suggestions fenced with ```diff blocks.
 - If uncertain due to missing context, state assumptions explicitly; do not ask for more info.
@@ -144,7 +144,7 @@ OUTPUT (use exactly these section headers)
 5) Performance and scalability
 6) Reliability and concurrency
 7) API/Behavior changes and migrations
-8) Tests: coverage gaps and proposed cases
+8) Tests coverage gaps and proposed cases
 9) Documentation and developer experience
 10) Per-file comments (file:lines — findings with severity)
 11) Suggested patches (```diff blocks)
