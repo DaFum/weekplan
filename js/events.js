@@ -129,11 +129,11 @@ function openModal(taskId = null) {
  */
 export function closeModal() {
   document.getElementById("task-modal")?.classList.add("hidden");
-      !document.getElementById("memory-game-modal")?.classList.contains("hidden") ||
-        !document.getElementById("quiz-game-modal")?.classList.contains("hidden");
-    if (!hasOtherOpen) {
-        document.body.classList.remove("modal-open");
-    }
+  const hasOtherOpen = ["prompt-modal", "memory-game-modal", "quiz-game-modal"].some(id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains("hidden");
+  });
+  if (!hasOtherOpen) document.body.classList.remove("modal-open");
 }
 
 /**
