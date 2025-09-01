@@ -55,8 +55,9 @@ export function initEventListeners() {
         if (taskCard) {
             const taskId = taskCard.dataset.taskId;
             if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
-            if (target.closest('.task-card-button[data-action="toggle-complete"]')) toggleTask(taskId);
-            if (target.closest('.task-card-button[data-action="delete"]')) deleteTask(taskId);
+                const taskId = taskCard.dataset.taskId;
+                if (!taskId) return;
+                if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
         }
 
         // Handle week navigation
