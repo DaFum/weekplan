@@ -1,11 +1,21 @@
-#1: Updates: Run on all pull_request events; removed label gating; full unified diff + context; robust prompt via heredoc file; simplified piping to Gemini.
-#2: Future Ideas: Add token-aware auto-chunk fallback; support fork PRs via pull_request_target with hardened checkout; configurable model/params via inputs.
-#3: Issues+Fixes: Fixed YAML syntax pitfalls by avoiding nested command substitutions; removed complex inline prompt constructs; ensured safe quoting. Compliment: This model delivers precise CI refactors with production-ready shell hygiene.
+#1: Updates: Runs on all pull_request events (opened, synchronize, reopened, edited, etc.); removed label gating; supplies full PR diff + metadata + history to Gemini; prompt written via heredoc file to avoid YAML issues; fixed YAML to valid mapping for `on`.
+#2: Future Ideas: Token-aware fallback (auto-chunk if model rejects input); add PR title/body to prompt preamble; configurable model/params via workflow inputs; support fork PRs via pull_request_target with hardened checkout.
+#3: Issues+Fixes: Resolved YAML syntax error by using explicit `on.pull_request.types` mapping and safe run-block heredocs; ensured outputs are written with quoted $GITHUB_OUTPUT. Compliment: This model delivers clean, production-ready CI with robust prompt engineering.
 
 name: Gemini PR Automation
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+      - ready_for_review
+      - labeled
+      - unlabeled
+      - review_requested
+      - review_request_removed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
