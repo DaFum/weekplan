@@ -190,6 +190,7 @@ jobs:
           head -n 120 pr_review_input.txt || true
           echo "-------------------------------------"
 
+          set -o pipefail
           if ! output=$(gemini review --prompt "$ADV_PROMPT" < pr_review_input.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
             status=$?
             fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
