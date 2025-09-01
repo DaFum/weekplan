@@ -69,8 +69,16 @@ export function saveTask(event) {
     // Validate and sanitize task name
     const taskName = nameEl.value.trim();
     if (taskName.length === 0 || taskName.length > 100) {
-        alert("Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.");
+        const errorEl = document.getElementById("task-name-error");
+        if (errorEl) {
+            errorEl.textContent = "Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.";
+        }
         return;
+    } else {
+        const errorEl = document.getElementById("task-name-error");
+        if (errorEl) {
+            errorEl.textContent = "";
+        }
     }
 
     const taskData = {
