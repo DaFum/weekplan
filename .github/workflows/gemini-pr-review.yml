@@ -1,6 +1,6 @@
-#1: Updates: Fixes diff chunk passing to Gemini CLI; now always uses cat to pipe file content to Gemini CLI, avoiding bash/redirect quirks in GitHub Actions. Prompt improved for robustness.
-#2: Future Ideas: Add automatic context fetching for large diffs; add per-file context summary. Compliment: This model quickly pinpoints shell/CI subtleties and proposes actionable, cross-platform fixes.
-#3: Issues+Fixes: Addresses Gemini CLI not receiving diff chunk content by using 'cat "$file" | gemini review' instead of input redirection, which can fail in some CI shells.
+#1: Updates: Removed all diff chunking logic; Gemini now receives the complete PR diff, including history, in a single request.
+#2: Future Ideas: Optionally add git log/context preamble for even more history if Gemini CLI supports; add PR metadata (title, description) into the prompt.
+#3: Issues+Fixes: Fixes Gemini review context loss by always supplying the full diff. Compliment: This model rapidly delivers robust CI/CD refactors with clear, minimal shell.
 
 name: Gemini PR Automation
 
@@ -39,77 +39,42 @@ jobs:
           fi
           echo "skip=false" >> $GITHUB_OUTPUT
 
-      - name: Generate PR diff
+      - name: Generate PR diff (full history)
         id: diff_check
         if: steps.check_secrets.outputs.skip != 'true'
         run: |
-            git fetch --no-tags --prune origin ${{ github.base_ref }}
-            BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
-            git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
+          git fetch --no-tags --prune origin ${{ github.base_ref }}
+          BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+          git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
 
-            if [ ! -s pr_diff_full.txt ]; then
-              echo "::notice::No diff to review. Skipping Gemini review."
-              echo "skip=true" >> $GITHUB_OUTPUT
-              exit 0
-            fi
+          if [ ! -s pr_diff_full.txt ]; then
+            echo "::notice::No diff to review. Skipping Gemini review."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-            MAX_DIFF_BYTES=256000
-            split -b $MAX_DIFF_BYTES -d pr_diff_full.txt pr_chunk_ --additional-suffix=.diff
-            chunks=$(ls pr_chunk_*.diff 2>/dev/null)
+          echo "skip=false" >> $GITHUB_OUTPUT
 
-            if [ -z "$chunks" ]; then
-              echo "::notice::No diff chunks created. Skipping Gemini review."
-              echo "skip=true" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-
-            {
-              echo "chunks<<EOF"
-              printf '%s\n' $chunks
-              echo "EOF"
-            } >> $GITHUB_OUTPUT
-
-            echo "skip=false" >> $GITHUB_OUTPUT
-
-      - name: Run Gemini review
+      - name: Run Gemini review (full diff, no chunking)
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         id: gemini_run
-        timeout-minutes: 5
+        timeout-minutes: 10
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          DIFF_CHUNKS: ${{ steps.diff_check.outputs.chunks }}
         run: |
           set -o pipefail
-          response=""
-          echo "== Gemini PR Review Debug =="
-          echo "DIFF_CHUNKS (raw):"
-          echo "${DIFF_CHUNKS}"
-          echo "-----------------------------"
-          for file in $DIFF_CHUNKS; do
-            echo "Processing diff chunk: $file"
-            if [ -z "$file" ]; then
-              echo "Skipping empty filename"
-              continue
-            fi
-            if [ ! -s "$file" ]; then
-              echo "::error::Diff chunk file $file is empty. Skipping."
-              continue
-            fi
-            echo "--- DIFF CONTENT BEGIN ---"
-            cat "$file"
-            echo "--- DIFF CONTENT END ---"
-            prompt="You're reviewing a pull request diff chunk from a GitHub repository. Focus your review on this chunk, as you may not have full file context. If additional context is needed, state which files or lines would help, but still provide any feedback possible for the given changes. Diff chunk follows:"
-            # Use cat to pipe the chunk to Gemini CLI instead of input redirection
-            if ! output=$(cat "$file" | gemini review --prompt "$prompt" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
-              status=$?
-              fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
-              fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
-              echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
-              exit $status
-            fi
-            response="$response\n\n### Review for $file\n$output"
-          done
-          response_b64=$(printf '%b' "$response" | base64 -w0)
+          prompt="You are reviewing the complete pull request diff (including all file changes and history) for a GitHub repository. Provide a detailed code review. If additional context is needed, specify which files or lines. Begin your review below."
+          echo "--- DIFF CONTENT BEGIN ---"
+          cat pr_diff_full.txt
+          echo "--- DIFF CONTENT END ---"
+          if ! output=$(cat pr_diff_full.txt | gemini review --prompt "$prompt" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
+            status=$?
+            fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
+            fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
+            echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
+            exit $status
+          fi
+          response_b64=$(printf '%b' "$output" | base64 -w0)
           echo "gemini_response=$response_b64" >> $GITHUB_OUTPUT
 
       - name: Verify Gemini output
