@@ -16,8 +16,9 @@ import { getState, updateState } from './state.js';
  * The created instances are saved under the `sounds` key by calling `updateState({ sounds })`.
  */
 export async function initSounds() {
-    const { sounds: existingSounds = {}, audioInitialized = false } = getState();
-    if (audioInitialized || Object.keys(existingSounds).length > 0) return;
+    const { sounds: existingSounds = {}, audioInitialized = false, audioInitializing = false } = getState();
+    if (audioInitialized || audioInitializing || Object.keys(existingSounds).length > 0) return;
+    updateState({ audioInitializing: true });
 
     let Tone;
     try {
