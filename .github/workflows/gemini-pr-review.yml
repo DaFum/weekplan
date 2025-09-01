@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,68 +37,94 @@ jobs:
           echo "skip=false" >> $GITHUB_OUTPUT
 
       - name: Generate PR diff
+        id: diff_check
         if: steps.check_secrets.outputs.skip != 'true'
         run: |
-          # Fetch full base branch history (no --depth flag; 0 is invalid)
-          git fetch --no-tags --prune origin ${{ github.base_ref }}
-          BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
-          git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
-          # Gemini API accepts up to ~256kB payloads per request
-          MAX_DIFF_BYTES=256000
-          if [ "$(wc -c < pr_diff_full.txt)" -gt "$MAX_DIFF_BYTES" ]; then
-            echo "::error::Diff exceeds ${MAX_DIFF_BYTES} bytes" >&2
-            echo "::error::Skipping review" >&2
-            exit 1
-          fi
-          head -c $MAX_DIFF_BYTES pr_diff_full.txt > pr_diff.txt
+            # Fetch base commit
+            git fetch --no-tags --prune origin ${{ github.base_ref }}
+            BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+            git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
+
+            if [ ! -s pr_diff_full.txt ]; then
+              echo "::notice::No diff to review. Skipping Gemini review."
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            # Gemini API accepts up to ~256kB payloads per request
+            MAX_DIFF_BYTES=256000
+            split -b $MAX_DIFF_BYTES -d pr_diff_full.txt pr_chunk_ --additional-suffix=.diff
+            chunks=$(ls pr_chunk_*.diff 2>/dev/null)
+
+            if [ -z "$chunks" ]; then
+              echo "::notice::No diff chunks created. Skipping Gemini review."
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            {
+              echo "chunks<<EOF"
+              printf '%s\n' $chunks
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+
+            echo "skip=false" >> $GITHUB_OUTPUT
       - name: Run Gemini review
-        if: steps.check_secrets.outputs.skip != 'true'
+        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         id: gemini_run
         timeout-minutes: 5
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DIFF_CHUNKS: ${{ steps.diff_check.outputs.chunks }}
         run: |
-          if ! output=$(gemini review --diff-file pr_diff.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
-            status=$?
-            echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-            printf ':warning: Gemini CLI failed (exit code %s).\n' "$status" >> $GITHUB_OUTPUT
-            printf 'Raw output: %s\n' "$output" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            exit $status
-          else
-            echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-            echo "$output" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          fi
+          set -o pipefail
+          response=""
+          for file in $DIFF_CHUNKS; do
+            if [ -z "$file" ]; then
+              continue
+            fi
+            if ! output=$(gemini review --prompt "Please review the following diff chunk:" < "$file" 2>&1 |
+              sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
+              status=$?
+              fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
+              fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
+              echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
+              exit $status
+            fi
+            response="$response\n\n### Review for $file\n$output"
+          done
+          response_b64=$(printf '%b' "$response" | base64 -w0)
+          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
 
       - name: Verify Gemini output
-        if: steps.check_secrets.outputs.skip != 'true'
+        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         env:
-          GEMINI_RESPONSE: ${{ steps.gemini_run.outputs.gemini_response }}
+          GEMINI_RESPONSE_B64: ${{ steps.gemini_run.outputs.gemini_response }}
         run: |
+          decoded=$(printf '%s' "$GEMINI_RESPONSE_B64" | base64 -d)
           warning_pattern='^:warning: Gemini CLI failed'
-          if [ -z "$GEMINI_RESPONSE" ]; then
+          if [ -z "$decoded" ]; then
             echo "Gemini CLI action did not produce a response."
             exit 1
-          elif grep -q "$warning_pattern" <<< "$GEMINI_RESPONSE"; then
+          elif grep -q "$warning_pattern" <<< "$decoded"; then
             echo "Gemini CLI action failed with an error."
             exit 1
           fi
 
       - name: Post PR Review Comment
-        if: steps.check_secrets.outputs.skip != 'true'
+        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         uses: actions/github-script@v7
         env:
-          GEMINI_RESPONSE: ${{ steps.gemini_run.outputs.gemini_response }}
+          GEMINI_RESPONSE_B64: ${{ steps.gemini_run.outputs.gemini_response }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue_number = context.payload.pull_request
               ? context.payload.pull_request.number
               : context.issue.number;
-            const raw = process.env.GEMINI_RESPONSE || '';
+            const raw = Buffer.from(process.env.GEMINI_RESPONSE_B64 || '', 'base64').toString('utf8');
             const MAX = 65000;
-            const trunc = "\n\n…[truncated]";
+            const trunc = "\n\n[truncated]";
             const body = raw.length > MAX ? raw.slice(0, MAX - trunc.length) + trunc : raw;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
@@ -108,7 +134,7 @@ jobs:
             });
 
       - name: Post PR review as comment (if needed)
-        if: failure() && steps.check_secrets.outputs.skip != 'true'
+        if: failure() && steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

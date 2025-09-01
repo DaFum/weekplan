@@ -1,89 +1,113 @@
 // Import state helpers
 import { getState, updateState } from './state.js';
 
-/**
- * Initializes three simple Tone.Synth instruments and registers them in the application state.
- *
- * This function attempts to dynamically import the Tone.js library. If successful,
- * it creates the synthesizers and registers them in the state. If an error occurs,
- * a message is logged to the console, and the sound functionality is disabled.
- *
- * The following synthesizers are created and connected to the audio output:
- * - `complete`: Sine oscillator with a fast attack and medium release, used for success sounds.
- * - `confetti`: Triangle oscillator with a slightly longer attack/decay, used for confetti/celebration effects.
- * - `coin`: Square oscillator with a short envelope, used for coin/click effects.
- *
- * The created instances are saved under the `sounds` key by calling `updateState({ sounds })`.
- */
-export async function initSounds() {
-    const { sounds: existingSounds = {}, audioInitialized = false, audioInitializing = false } = getState();
-    if (audioInitialized || audioInitializing || Object.keys(existingSounds).length > 0) return;
-    updateState({ audioInitializing: true });
+// Maximum time (ms) to wait for dynamic imports or script loads
+const LOAD_TIMEOUT = 5000;
 
-    let Tone;
+/**
+ * Dynamically loads Tone.js either as an ESM module or via a script tag.
+ * @returns {Promise<typeof import('tone')|null>} The Tone namespace or null on failure.
+ */
+async function loadTone() {
     try {
-        // Prefer ESM build; fallback handled below if this fails
         const importPromise = import('https://esm.sh/tone@14');
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Tone.js import timed out")), 5000)
-        );
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Tone.js import timed out')), LOAD_TIMEOUT);
+        });
         const mod = await Promise.race([importPromise, timeoutPromise]);
-        Tone = mod?.default ?? mod?.Tone ?? mod;
+        const Tone = mod?.default ?? mod?.Tone ?? mod;
+        if (Tone && Tone.Synth) return Tone;
     } catch (error) {
-        console.warn("Tone.js dynamic import failed, falling back to script tag.", error);
-        Tone = null;
+        console.warn('Tone.js dynamic import failed, falling back to script tag.', error);
     }
 
-    if (!Tone || !Tone.Synth) {
-        // Fallback: load UMD build via script tag
+    // Fallback: load UMD build via script tag
+    try {
+        return await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js';
+            script.async = true;
+            const cleanup = () => {
+                if (script.parentNode) document.head.removeChild(script);
+                clearTimeout(timeoutId);
+            };
+            script.onload = () => {
+                cleanup();
+                resolve(window.Tone);
+            };
+            script.onerror = () => {
+                cleanup();
+                reject(new Error('Tone.js script failed to load'));
+            };
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('Tone.js script load timed out'));
+            }, LOAD_TIMEOUT);
+            document.head.appendChild(script);
+        });
+    } catch (error) {
+        console.error('Tone.js could not be loaded or audio synthesizers could not be created. Audio functions are disabled.', error);
+        return null;
+    }
+}
+
+/**
+ * Disposes existing synthesizers safely.
+ * @param {Record<string, any>} sounds - Current sound objects.
+ */
+function disposeSounds(sounds) {
+    for (const key of Object.keys(sounds)) {
         try {
-            Tone = await new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js';
-                script.async = true;
-                const cleanup = () => {
-                  if (script.parentNode) {
-                    document.head.removeChild(script);
-                  }
-                  clearTimeout(timeoutId);
-                };
-                script.onload = () => {
-                  cleanup();
-                  resolve(window.Tone);
-                };
-                script.onerror = () => {
-                  cleanup();
-                  reject(new Error('Tone.js script failed to load'));
-                };
-                const timeoutId = setTimeout(() => {
-                  cleanup();
-                  reject(new Error('Tone.js script load timed out'));
-                }, 5000);
-                document.head.appendChild(script);
-            });
+            sounds[key]?.dispose?.();
         } catch (error) {
-            console.error('Tone.js could not be loaded or audio synthesizers could not be created. Audio functions are disabled.', error);
-            updateState({ sounds: {}, audioInitialized: false });
-            return;
+            console.warn(`Failed to dispose synth "${key}":`, error);
         }
     }
-
-for (const key of Object.keys(existingSounds)) {
-    try { 
-        existingSounds[key]?.dispose?.(); 
-    } catch (error) {
-        console.warn(`Failed to dispose synth "${key}":`, error);
-    }
 }
-    }
 
-    // Create the synthesizers
-    const sounds = {
-        complete: new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 } }).toDestination(),
-        confetti: new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 } }).toDestination(),
-        coin: new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination()
+/**
+ * Creates the application's synthesizers.
+ * @param {typeof import('tone')} Tone - The Tone.js namespace.
+ */
+function createSynths(Tone) {
+    return {
+        complete: new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 }
+        }).toDestination(),
+        confetti: new Tone.Synth({
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
+        }).toDestination(),
+        coin: new Tone.Synth({
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }
+        }).toDestination()
     };
-
-    // Update the application state with the created sounds
-    updateState({ sounds, audioInitialized: true });
 }
+
+/**
+ * Initializes Tone.js synthesizers and registers them in the application state.
+ */
+export async function initSounds() {
+    const {
+        sounds: existingSounds = {},
+        audioInitialized = false,
+        audioInitializing = false
+    } = getState();
+
+    if (audioInitialized || audioInitializing) return;
+    updateState({ audioInitializing: true });
+
+    disposeSounds(existingSounds);
+
+    const Tone = await loadTone();
+    if (!Tone) {
+        updateState({ sounds: {}, audioInitialized: false, audioInitializing: false });
+        return;
+    }
+
+    const sounds = createSynths(Tone);
+    updateState({ sounds, audioInitialized: true, audioInitializing: false });
+}
+
