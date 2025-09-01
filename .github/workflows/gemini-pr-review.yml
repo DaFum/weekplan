@@ -45,42 +45,40 @@ jobs:
             BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
             git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
 
-            # Gemini API accepts up to ~256kB payloads per request
-            MAX_DIFF_BYTES=256000
-            split -b $MAX_DIFF_BYTES -d --additional-suffix=.diff pr_diff_full.txt pr_chunk_
-            chunks=$(ls pr_chunk_*.diff 2>/dev/null | tr '\n' ' ')
-            if [ -z "$chunks" ]; then
+            if [ ! -s pr_diff_full.txt ]; then
               echo "::notice::No diff to review. Skipping Gemini review."
               echo "skip=true" >> $GITHUB_OUTPUT
               exit 0
             fi
+
+            # Gemini API accepts up to ~256kB payloads per request
+            MAX_DIFF_BYTES=256000
+            if [ "$(wc -c < pr_diff_full.txt)" -gt "$MAX_DIFF_BYTES" ]; then
+              echo "::notice::Skipping Gemini review: Diff exceeds ${MAX_DIFF_BYTES} bytes"
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            head -c $MAX_DIFF_BYTES pr_diff_full.txt > pr_diff.txt
             echo "skip=false" >> $GITHUB_OUTPUT
-            echo "chunks=$chunks" >> $GITHUB_OUTPUT
+            echo "diff=pr_diff.txt" >> $GITHUB_OUTPUT
       - name: Run Gemini review
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         id: gemini_run
         timeout-minutes: 5
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          DIFF_CHUNKS: ${{ steps.diff_check.outputs.chunks }}
+          DIFF_FILE: ${{ steps.diff_check.outputs.diff }}
         run: |
-          response=""
-          for file in $DIFF_CHUNKS; do
-            if [ -z "$file" ]; then
-              continue
-            fi
-            if ! output=$(gemini review --diff-file "$file" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
-              status=$?
-              fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
-              fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
-              echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
-              exit $status
-            else
-              response="$response\n\n### Review for $file\n$output"
-            fi
-          done
-          response_b64=$(printf '%b' "$response" | base64 -w0)
-          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
+          if ! output=$(gemini review --diff-file "$DIFF_FILE" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
+            status=$?
+            fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
+            fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
+            echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
+            exit $status
+          fi
+          output_b64=$(printf '%s' "$output" | base64 -w0)
+          echo "gemini_response=$output_b64" >> "$GITHUB_OUTPUT"
 
       - name: Verify Gemini output
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
