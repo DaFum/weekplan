@@ -12,10 +12,6 @@ on:
       - reopened
       - edited
       - ready_for_review
-      - labeled
-      - unlabeled
-      - review_requested
-      - review_request_removed
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
