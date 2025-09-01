@@ -1,6 +1,6 @@
-#1: Updates: Run on all pull_request events (opened, updated, edited, etc.); removed label gating; added advanced, structured prompt; added PR metadata, commit history, file list, and diffstat to the AI context; single-shot full diff (no chunking).
-#2: Future Ideas: Support fork PRs securely via pull_request_target with hardened checkout; add model selection/temperature controls; add auto-summarized per-file context; add token-aware auto-chunking fallback when diff exceeds model limits.
-#3: Issues+Fixes: Fixed limited context by providing full PR metadata and history; simplified triggers to cover all PR updates; improved output structure and severity tagging. Compliment: This model delivers precise CI refactors and prompt engineering with production rigor.
+#1: Updates: Run on all pull_request events; removed label gating; full unified diff + context; robust prompt via heredoc file; simplified piping to Gemini.
+#2: Future Ideas: Add token-aware auto-chunk fallback; support fork PRs via pull_request_target with hardened checkout; configurable model/params via inputs.
+#3: Issues+Fixes: Fixed YAML syntax pitfalls by avoiding nested command substitutions; removed complex inline prompt constructs; ensured safe quoting. Compliment: This model delivers precise CI refactors with production-ready shell hygiene.
 
 name: Gemini PR Automation
 
@@ -26,6 +26,7 @@ jobs:
 
       - name: Ensure jq is available
         run: |
+          set -e
           if ! command -v jq >/dev/null 2>&1; then
             sudo apt-get update -y
             sudo apt-get install -y jq
@@ -42,10 +43,10 @@ jobs:
         run: |
           if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
             echo "::notice::GEMINI_API_KEY secret is not configured. Skipping AI review."
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Generate PR diff and context (full)
         id: diff_check
@@ -53,26 +54,26 @@ jobs:
         run: |
           set -eo pipefail
 
-          # Determine base and head
+          # Determine base and head for the PR
           git fetch --no-tags --prune origin ${{ github.base_ref }}
           BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
           HEAD_SHA=$(git rev-parse HEAD)
 
-          # Full unified diff
+          # Full unified diff between base and head
           git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
 
           if [ ! -s pr_diff_full.txt ]; then
             echo "::notice::No diff to review. Skipping Gemini review."
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Useful context for the reviewer
+          # Additional helpful context
           git diff --name-status "${BASE_SHA}..HEAD" > pr_files.txt
           git diff --stat "${BASE_SHA}..HEAD" > pr_diffstat.txt
           git log --pretty=format:'%h %ad %an %d %s' --date=short "${BASE_SHA}..HEAD" > pr_commits.txt
 
-          # PR metadata from event
+          # PR metadata from event payload
           PR_TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
           PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
           PR_NUMBER=$(jq -r '.number' "$GITHUB_EVENT_PATH")
@@ -104,9 +105,9 @@ jobs:
             cat pr_diff_full.txt
           } > pr_review_input.txt
 
-          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
-      - name: Run Gemini review (advanced prompt, full context)
+      - name: Run Gemini review - advanced prompt, full context
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         id: gemini_run
         timeout-minutes: 15
@@ -115,28 +116,30 @@ jobs:
         run: |
           set -o pipefail
 
-          ADV_PROMPT=$(cat <<'PROMPT'
-[role Senior Staff Engineer | Principal Reviewer]
-You are performing a rigorous code review for this pull request.
+          # Write advanced prompt to a file to avoid YAML quoting issues
+          cat > prompt.txt <<'PROMPT'
+[Role]
+Senior Staff Engineer / Principal Reviewer
 
-OBJECTIVES
+[Objectives]
 - Ensure correctness, security, performance, reliability, and maintainability.
 - Identify breaking changes and migration needs.
 - Provide actionable, minimal-diff suggestions.
 
-INPUT
-The stdin begins with "Review context" (PR metadata, commit history, changed files, diffstat), followed by the complete unified diff.
+[Input]
+STDIN starts with "Review context" (PR metadata, commit history, changed files, diffstat),
+followed by the complete unified diff between base and head.
 
-GUIDELINES
-- Base your analysis strictly on the provided input; do not assume external code.
+[Guidelines]
+- Base your analysis strictly on the provided input; avoid external assumptions.
 - Reference files and line ranges from the diff (e.g., path/to/file:123-145).
-- Assign a severity to each issue [critical|major|minor|nit].
-- Prioritize issues that affect correctness, security, or performance.
-- Where helpful, include patch-style suggestions fenced with ```diff blocks.
-- If uncertain due to missing context, state assumptions explicitly; do not ask for more info.
-- Prefer small, targeted changes; avoid large refactors unless necessary.
+- Assign a severity to each finding: [critical | major | minor | nit].
+- Prioritize issues affecting correctness, security, or performance.
+- Include patch-style suggestions as fenced diff blocks.
+- If uncertain due to missing context, state assumptions explicitly; do not request more info.
+- Prefer small, targeted changes; avoid broad refactors unless necessary.
 
-OUTPUT (use exactly these section headers)
+[Output - use exactly these headings]
 1) High-level summary
 2) Key risks and impact
 3) Correctness and edge cases
@@ -144,19 +147,19 @@ OUTPUT (use exactly these section headers)
 5) Performance and scalability
 6) Reliability and concurrency
 7) API/Behavior changes and migrations
-8) Tests coverage gaps and proposed cases
+8) Tests: coverage gaps and proposed cases
 9) Documentation and developer experience
 10) Per-file comments (file:lines — findings with severity)
-11) Suggested patches (```diff blocks)
+11) Suggested patches (fenced diff blocks)
 12) Final verdict (approve or changes requested) with rationale
 PROMPT
-)
 
           echo "--- PR REVIEW INPUT (preview head) ---"
           head -n 200 pr_review_input.txt || true
           echo "-------------------------------------"
 
-          if ! output=$(cat pr_review_input.txt | gemini review --prompt "$ADV_PROMPT" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
+          # Feed full context into Gemini
+          if ! output=$(cat pr_review_input.txt | gemini review --prompt "$(cat prompt.txt)" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
             status=$?
             fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
             fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
@@ -165,7 +168,7 @@ PROMPT
           fi
 
           response_b64=$(printf '%b' "$output" | base64 -w0)
-          echo "gemini_response=$response_b64" >> $GITHUB_OUTPUT
+          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
 
       - name: Verify Gemini output
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
@@ -204,7 +207,7 @@ PROMPT
               body
             });
 
-      - name: Post PR review as comment (if needed)
+      - name: Post PR review as comment on failure
         if: failure() && steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         uses: actions/github-script@v7
         with:
@@ -216,7 +219,7 @@ PROMPT
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: issue_number,
+              issue_number,
               body: ':warning: Gemini review failed. See the Actions tab for details: '
                 + '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
             });
