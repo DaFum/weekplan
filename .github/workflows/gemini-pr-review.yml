@@ -1,3 +1,7 @@
+#1: Updates: Removed all diff chunking logic; Gemini now receives the complete PR diff, including history, in a single request.
+#2: Future Ideas: Optionally add git log/context preamble for even more history if Gemini CLI supports; add PR metadata (title, description) into the prompt.
+#3: Issues+Fixes: Fixes Gemini review context loss by always supplying the full diff. Compliment: This model rapidly delivers robust CI/CD refactors with clear, minimal shell.
+
 name: Gemini PR Automation
 
 on:
@@ -25,7 +29,6 @@ jobs:
         run: |
           npm install --silent --no-audit --prefer-offline \
             --global @google/gemini-cli@0.1.12
-            
       - name: Check for required secrets
         id: check_secrets
         run: |
@@ -36,65 +39,43 @@ jobs:
           fi
           echo "skip=false" >> $GITHUB_OUTPUT
 
-      - name: Generate PR diff
+      - name: Generate PR diff (full history)
         id: diff_check
         if: steps.check_secrets.outputs.skip != 'true'
         run: |
-            # Fetch base commit
-            git fetch --no-tags --prune origin ${{ github.base_ref }}
-            BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
-            git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
+          git fetch --no-tags --prune origin ${{ github.base_ref }}
+          BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+          git diff "${BASE_SHA}"..HEAD > pr_diff_full.txt
 
-            if [ ! -s pr_diff_full.txt ]; then
-              echo "::notice::No diff to review. Skipping Gemini review."
-              echo "skip=true" >> $GITHUB_OUTPUT
-              exit 0
-            fi
+          if [ ! -s pr_diff_full.txt ]; then
+            echo "::notice::No diff to review. Skipping Gemini review."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
-            # Gemini API accepts up to ~256kB payloads per request
-            MAX_DIFF_BYTES=256000
-            split -b $MAX_DIFF_BYTES -d pr_diff_full.txt pr_chunk_ --additional-suffix=.diff
-            chunks=$(ls pr_chunk_*.diff 2>/dev/null)
+          echo "skip=false" >> $GITHUB_OUTPUT
 
-            if [ -z "$chunks" ]; then
-              echo "::notice::No diff chunks created. Skipping Gemini review."
-              echo "skip=true" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-
-            {
-              echo "chunks<<EOF"
-              printf '%s\n' $chunks
-              echo "EOF"
-            } >> $GITHUB_OUTPUT
-
-            echo "skip=false" >> $GITHUB_OUTPUT
-      - name: Run Gemini review
+      - name: Run Gemini review (full diff, no chunking)
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         id: gemini_run
-        timeout-minutes: 5
+        timeout-minutes: 10
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          DIFF_CHUNKS: ${{ steps.diff_check.outputs.chunks }}
         run: |
           set -o pipefail
-          response=""
-          for file in $DIFF_CHUNKS; do
-            if [ -z "$file" ]; then
-              continue
-            fi
-            if ! output=$(gemini review --prompt "Please review the following diff chunk:" < "$file" 2>&1 |
-              sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
-              status=$?
-              fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
-              fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
-              echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
-              exit $status
-            fi
-            response="$response\n\n### Review for $file\n$output"
-          done
-          response_b64=$(printf '%b' "$response" | base64 -w0)
-          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
+          prompt="You are reviewing the complete pull request diff (including all file changes and history) for a GitHub repository. Focus on identifying potential bugs, security issues, and code quality concerns. Structure your review with clear section headers (## Findings, ## Suggestions) and use markdown formatting. If additional context is needed, specify which files or lines. Begin your review below."
+          echo "--- DIFF CONTENT BEGIN ---"
+          cat pr_diff_full.txt
+          echo "--- DIFF CONTENT END ---"
+          if ! output=$(cat pr_diff_full.txt | gemini review --prompt "$prompt" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
+            status=$?
+            fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
+            fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
+            echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
+            exit $status
+          fi
+          response_b64=$(printf '%b' "$output" | base64 -w0)
+          echo "gemini_response=$response_b64" >> $GITHUB_OUTPUT
 
       - name: Verify Gemini output
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
