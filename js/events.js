@@ -35,10 +35,8 @@ export function initEventListeners() {
 
         // Handle modal interactions
         if (target.closest("#open-task-modal")) openModal();
-        if (target.closest("#close-task-modal")) closeModal();
-        if (target.closest("#cancel-task-modal")) closeModal();
-        if (target.closest("#close-prompt-modal")) closePromptModal();
-        if (target.closest("#cancel-prompt-modal")) closePromptModal();
+        if (target.closest("#close-task-modal") || target.closest("#cancel-task-modal")) closeModal();
+        if (target.closest("#close-prompt-modal") || target.closest("#cancel-prompt-modal")) closePromptModal();
 
         // Handle game interactions
         if (target.closest("#open-memory-game")) openGame("memory");
