@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -71,29 +71,28 @@ jobs:
             fi
             if ! output=$(gemini review --diff-file "$file" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
               status=$?
-              echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-              printf ':warning: Gemini CLI failed (exit code %s).\n' "$status" >> $GITHUB_OUTPUT
-              printf 'Raw output: %s\n' "$output" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
+              fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
+              fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
+              echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
               exit $status
             else
               response="$response\n\n### Review for $file\n$output"
             fi
           done
-          echo "gemini_response<<EOF" >> $GITHUB_OUTPUT
-          printf '%b\n' "$response" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          response_b64=$(printf '%b' "$response" | base64 -w0)
+          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
 
       - name: Verify Gemini output
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         env:
-          GEMINI_RESPONSE: ${{ steps.gemini_run.outputs.gemini_response }}
+          GEMINI_RESPONSE_B64: ${{ steps.gemini_run.outputs.gemini_response }}
         run: |
+          decoded=$(printf '%s' "$GEMINI_RESPONSE_B64" | base64 -d)
           warning_pattern='^:warning: Gemini CLI failed'
-          if [ -z "$GEMINI_RESPONSE" ]; then
+          if [ -z "$decoded" ]; then
             echo "Gemini CLI action did not produce a response."
             exit 1
-          elif grep -q "$warning_pattern" <<< "$GEMINI_RESPONSE"; then
+          elif grep -q "$warning_pattern" <<< "$decoded"; then
             echo "Gemini CLI action failed with an error."
             exit 1
           fi
@@ -102,14 +101,14 @@ jobs:
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         uses: actions/github-script@v7
         env:
-          GEMINI_RESPONSE: ${{ steps.gemini_run.outputs.gemini_response }}
+          GEMINI_RESPONSE_B64: ${{ steps.gemini_run.outputs.gemini_response }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue_number = context.payload.pull_request
               ? context.payload.pull_request.number
               : context.issue.number;
-            const raw = process.env.GEMINI_RESPONSE || '';
+            const raw = Buffer.from(process.env.GEMINI_RESPONSE_B64 || '', 'base64').toString('utf8');
             const MAX = 65000;
             const trunc = "\n\n[truncated]";
             const body = raw.length > MAX ? raw.slice(0, MAX - trunc.length) + trunc : raw;
