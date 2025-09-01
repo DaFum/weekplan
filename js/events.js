@@ -129,8 +129,7 @@ function openModal(taskId = null) {
  */
 export function closeModal() {
   document.getElementById("task-modal")?.classList.add("hidden");
-  const hasOtherOpen = 
-      !document.getElementById("memory-game-modal")?.classList.contains("hidden") ||2
+      !document.getElementById("memory-game-modal")?.classList.contains("hidden") ||
         !document.getElementById("quiz-game-modal")?.classList.contains("hidden");
     if (!hasOtherOpen) {
         document.body.classList.remove("modal-open");
