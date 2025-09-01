@@ -85,6 +85,14 @@ jobs:
             exit 0
           fi
 
+          # For potential truncation in later steps, also copy to pr_diff.txt
+          cp pr_diff_full.txt pr_diff.txt
+
+          echo "::group::Gemini input meta"
+          echo "Bytes: $(wc -c < pr_diff.txt)"
+          echo "SHA256: $(sha256sum pr_diff.txt | cut -d' ' -f1)"
+          echo "::endgroup::"
+
           # Fetch changed files (name/status/additions/deletions)
           curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
             "$API/pulls/$PR_NUMBER/files?per_page=100" > pr_files.json
@@ -182,7 +190,7 @@ jobs:
           head -n 120 pr_review_input.txt || true
           echo "-------------------------------------"
 
-          if ! output=$(cat pr_review_input.txt | gemini review --prompt "$ADV_PROMPT" 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
+          if ! output=$(gemini review --prompt "$ADV_PROMPT" < pr_review_input.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
             status=$?
             fail_msg=$(printf ':warning: Gemini CLI failed (exit code %s).\nRaw output: %s\n' "$status" "$output")
             fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
