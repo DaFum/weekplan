@@ -562,42 +562,35 @@ export function renderTaskModal(state, taskId = null) {
         if (idInput) idInput.value = "";
     }
 
-    if (taskDateSelect) populateTaskDateOptions(taskDateSelect, taskToEdit);
+    if (taskDateSelect) {
+        taskDateSelect.innerHTML = "";
+        const now = new Date();
+        const startOfWeek = getStartOfWeek(now);
+        const todayISO = getISODate(now);
+
+        for (let week = 0; week < 4; week++) {
+            const optgroup = document.createElement("optgroup");
+            optgroup.label = `Woche ${week + 1}`;
+            for (let day = 0; day < 7; day++) {
+                const currentDate = addDays(startOfWeek, week * 7 + day);
+                const isoDate = getISODate(currentDate);
+                const option = document.createElement("option");
+                option.value = isoDate;
+                option.textContent = formatDisplayDate(currentDate);
+
+                if (taskToEdit) {
+                    option.selected = (isoDate === taskToEdit.date);
+                } else {
+                    option.selected = (isoDate === todayISO);
+                }
+                optgroup.appendChild(option);
+            }
+            taskDateSelect.appendChild(optgroup);
+        }
+    }
 
     if (document.querySelector('input[name="kategorie"]')) {
       setupRadioStyling();
-    }
-}
-
-/**
- * Populates the date selector for the task modal.
- * @param {HTMLSelectElement} select - The select element to populate.
- * @param {Object|null} taskToEdit - Existing task being edited, if any.
- */
-function populateTaskDateOptions(select, taskToEdit) {
-    select.innerHTML = "";
-    const now = new Date();
-    const startOfWeek = getStartOfWeek(now);
-    const todayISO = getISODate(now);
-
-    for (let week = 0; week < 4; week++) {
-        const optgroup = document.createElement("optgroup");
-        optgroup.label = `Woche ${week + 1}`;
-        for (let day = 0; day < 7; day++) {
-            const currentDate = addDays(startOfWeek, week * 7 + day);
-            const isoDate = getISODate(currentDate);
-            const option = document.createElement("option");
-            option.value = isoDate;
-            option.textContent = formatDisplayDate(currentDate);
-
-            if (taskToEdit) {
-                option.selected = (isoDate === taskToEdit.date);
-            } else {
-                option.selected = (isoDate === todayISO);
-            }
-            optgroup.appendChild(option);
-        }
-        select.appendChild(optgroup);
     }
 }
 
