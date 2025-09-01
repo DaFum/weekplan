@@ -85,7 +85,8 @@ jobs:
             exit 0
           fi
 
-          # For potential truncation in later steps, also copy to pr_diff.txt
+          # Copy to pr_diff.txt for downstream processing: if the diff is too large for the AI model or later steps, pr_diff.txt may be truncated to fit input size limits.
+          # This ensures pr_diff_full.txt always contains the complete diff, while pr_diff.txt can be safely modified or truncated as needed.
           cp pr_diff_full.txt pr_diff.txt
 
           echo "::group::Gemini input meta"
