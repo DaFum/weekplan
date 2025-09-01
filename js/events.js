@@ -129,12 +129,12 @@ function openModal(taskId = null) {
  */
 export function closeModal() {
   document.getElementById("task-modal")?.classList.add("hidden");
-  const hasOtherOpen = 
-      !document.getElementById("memory-game-modal")?.classList.contains("hidden") ||2
-        !document.getElementById("quiz-game-modal")?.classList.contains("hidden");
-    if (!hasOtherOpen) {
-        document.body.classList.remove("modal-open");
-    }
+  const hasOtherOpen =
+      !document.getElementById("memory-game-modal")?.classList.contains("hidden") ||
+      !document.getElementById("quiz-game-modal")?.classList.contains("hidden");
+  if (!hasOtherOpen) {
+      document.body.classList.remove("modal-open");
+  }
 }
 
 /**
@@ -153,7 +153,8 @@ export function openPromptModal(title, label, initialValue, callback) {
     const input = document.getElementById("prompt-modal-input");
     if (input) {
         input.value = initialValue;
-        input.step = label.toLowerCase().includes("stunden") ? "0.5" : "1";
+        const step = typeof label === "string" && label.toLowerCase().includes("stunden") ? "0.5" : "1";
+        input.step = step;
         input.min = "0";
     }
     document.getElementById("prompt-modal")?.classList.remove("hidden");

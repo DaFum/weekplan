@@ -104,7 +104,8 @@ function renderTimeTrackerStructure() {
 export function updateTimeTracker(state) {
     const { tasks, pcStundenGesamt } = state;
     const startOfWeek = getStartOfWeek(new Date());
-    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
     const usedMinutes = tasks
         .filter(t => t && t.kategorie === "pc" && t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek))
         .reduce((sum, t) => sum + (t.durationInMinutes || 0), 0);
@@ -157,7 +158,8 @@ function renderWeeklyGoalTrackerStructure() {
 export function updateWeeklyGoalTracker(state) {
     const { tasks, wochenZiel } = state;
     const startOfWeek = getStartOfWeek(new Date());
-    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
     const tasksDone = tasks.filter(t => t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek)).length;
     const progress = wochenZiel > 0 ? Math.min((tasksDone / wochenZiel) * 100, 100) : 0;
 
@@ -237,7 +239,8 @@ export function renderPlan(state) {
         wochenContainer.appendChild(wochenAnsicht);
     }
     renderAllTasks(state.tasks);
-    showWoche(aktiveWoche);
+    const { aktiveWoche: aktuelleWoche } = getState();
+    showWoche(Number.isInteger(aktuelleWoche) ? aktuelleWoche : 0);
     initSortable();
 }
 
