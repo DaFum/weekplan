@@ -28,98 +28,94 @@ export function initEventListeners() {
     document.body.addEventListener("pointerdown", startAudio, { once: true });
     document.body.addEventListener("click", startAudio, { once: true });
 
-    // Centralized click handler using small helpers for readability
-    document.body.addEventListener("click", handleBodyClick);
+
+    // Add a single click event listener to the body for event delegation
+    document.body.addEventListener("click", function(event) {
+        const target = event.target;
+
+        // Handle modal interactions
+        if (target.closest("#open-task-modal")) openModal();
+        if (target.closest("#close-task-modal") || target.closest("#cancel-task-modal")) closeModal();
+        if (target.closest("#close-prompt-modal") || target.closest("#cancel-prompt-modal")) closePromptModal();
+
+        // Handle game interactions
+        if (target.closest("#open-memory-game")) openGame("memory");
+        if (target.closest("#open-quiz-game")) openGame("quiz");
+        if (target.closest(".close-game-btn")) closeGame();
+
+        // Handle settings interactions
+        if (target.closest("#pc-time-settings-btn")) setPcTimeLimit();
+        if (target.closest("#weekly-goal-settings-btn")) setWeeklyGoal();
+
+        // Handle theme toggling
+        if (target.closest("#theme-toggle")) toggleTheme();
+
+        // Handle dynamically created elements
+        const taskCard = target.closest(".task-card");
+        if (taskCard) {
+            const taskId = taskCard.dataset.taskId;
+            if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
+                const taskId = taskCard.dataset.taskId;
+                if (!taskId) return;
+                if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
+        }
+
+        // Handle week navigation
+        const navButton = target.closest(".nav-button");
+        if (navButton) {
+            showWoche(parseInt(navButton.dataset.weekIndex, 10));
+            if (navButton) {
+                const idx = parseInt(navButton.dataset.weekIndex, 10);
+                if (Number.isFinite(idx)) {
+                    showWoche(idx);
+                }
+            }
+
+            // Handle quiz answer selection
+            const quizOption = target.closest(".quiz-option");
+            if (quizOption) {
+                const ansIdx = parseInt(quizOption.dataset.index, 10);
+                if (Number.isFinite(ansIdx)) {
+                    checkQuizAnswer(ansIdx);
+                }
+            }
+        const btn = event.target.closest("button");
+        if (btn && !btn.disabled) createRipple(btn, event);
+    });
 
     // Add submit event listener to the task form
     const taskForm = document.getElementById("task-form");
-    if (taskForm) taskForm.addEventListener("submit", saveTask);
+    if (taskForm) {
+        taskForm.addEventListener("submit", saveTask);
+    }
 
     // Add submit event listener to the prompt form
     const promptForm = document.getElementById("prompt-form");
     if (promptForm) {
-        promptForm.addEventListener("submit", handlePromptSubmit);
-    }
-}
+        promptForm.addEventListener("submit", (event) => {
+            event.preventDefault();
 
-// Helper to handle body clicks with minimal complexity
-function handleBodyClick(event) {
-    const target = event.target;
-    handleModalClicks(target);
-    handleGameClicks(target);
-    handleSettingsClicks(target);
-    if (target.closest("#theme-toggle")) toggleTheme();
-    handleTaskCardClicks(target);
-    handleWeekNav(target);
-    handleQuizClicks(target);
-    applyRipple(event, target);
-}
+            const { promptCallback } = getState();
 
-function handleModalClicks(target) {
-    if (target.closest("#open-task-modal")) openModal();
-    if (target.closest("#close-task-modal")) closeModal();
-    if (target.closest("#cancel-task-modal")) closeModal();
-    if (target.closest("#close-prompt-modal")) closePromptModal();
-    if (target.closest("#cancel-prompt-modal")) closePromptModal();
-}
+            // Guard against missing or non-input element
+            const inputEl = document.getElementById("prompt-modal-input");
+            if (!(inputEl instanceof HTMLInputElement)) {
+                closePromptModal();
+                return;
+            }
 
-function handleGameClicks(target) {
-    if (target.closest("#open-memory-game")) openGame("memory");
-    if (target.closest("#open-quiz-game")) openGame("quiz");
-    if (target.closest(".close-game-btn")) closeGame();
-}
+            const raw = inputEl.value;
+            const num = raw === "" ? NaN : Number(raw);
 
-function handleSettingsClicks(target) {
-    if (target.closest("#pc-time-settings-btn")) setPcTimeLimit();
-    if (target.closest("#weekly-goal-settings-btn")) setWeeklyGoal();
-}
-
-function handleTaskCardClicks(target) {
-    const taskCard = target.closest(".task-card");
-    if (taskCard) {
-        const taskId = taskCard.dataset.taskId;
-        if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
-        if (target.closest('.task-card-button[data-action="toggle-complete"]')) toggleTask(taskId);
-        if (target.closest('.task-card-button[data-action="delete"]')) deleteTask(taskId);
-    }
-}
-
-function handleWeekNav(target) {
-    const navButton = target.closest(".nav-button");
-    if (navButton) {
-        showWoche(parseInt(navButton.dataset.weekIndex, 10));
-    }
-}
-
-function handleQuizClicks(target) {
-    const quizOption = target.closest(".quiz-option");
-    if (quizOption) {
-        checkQuizAnswer(parseInt(quizOption.dataset.index, 10));
-    }
-}
-
-function applyRipple(event, target) {
-    const btn = target.closest("button");
-    if (btn && !btn.disabled) createRipple(btn, event);
-}
-
-function handlePromptSubmit(event) {
-    event.preventDefault();
-    const { promptCallback } = getState();
-    const inputEl = document.getElementById("prompt-modal-input");
-    if (!(inputEl instanceof HTMLInputElement)) {
-        closePromptModal();
-        return;
-    }
-    const raw = inputEl.value;
-    const num = raw === "" ? NaN : Number(raw);
-    if (typeof promptCallback === "function" && Number.isFinite(num) && num >= 0) {
-        promptCallback(num);
-        closePromptModal();
-    } else if (Number.isFinite(num) && num < 0) {
-        alert("Bitte geben Sie eine positive Zahl ein.");
-    } else {
-        closePromptModal();
+            if (typeof promptCallback === "function" && Number.isFinite(num) && num >= 0) {
+                promptCallback(num);
+                closePromptModal();
+            } else if (Number.isFinite(num) && num < 0) {
+                alert("Bitte geben Sie eine positive Zahl ein.");
+            } else {
+                closePromptModal();
+            }
+        });
     }
 }
 

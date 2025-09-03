@@ -147,7 +147,13 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-/* Task card animation keyframes */
+/* Task card animation */
+.task-card {
+    animation: pop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transform: scale(0.95);
+}
+
 @keyframes pop-in {
     to {
         opacity: 1;
@@ -441,9 +447,6 @@ body {
     border: 1px solid var(--border-color);
     background-color: var(--bg-accent);
     transition: all 0.2s;
-    animation: pop-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    opacity: 0;
-    transform: scale(0.95);
 }
 
 .task-card.completed {
