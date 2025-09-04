@@ -41,7 +41,7 @@ jobs:
 
       - name: Install Gemini CLI
         run: |
-          GEMINI_CLI_VERSION="${GEMINI_CLI_VERSION:-0.2.2}"
+          GEMINI_CLI_VERSION="${GEMINI_CLI_VERSION:-0.1.12}"
           npm install --silent --no-audit --prefer-offline --global "@google/gemini-cli@${GEMINI_CLI_VERSION}"
 
       - name: Check for required secrets
