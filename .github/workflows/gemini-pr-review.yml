@@ -1,7 +1,3 @@
-#1: Updates: Runs on all PR events; removes label gating; fetches the complete PR diff and metadata via GitHub API (robust for forks); supplies advanced, structured prompt; avoids heredocs to prevent YAML parsing issues.
-#2: Future Ideas: Token-aware fallback (auto-chunk if model rejects input); configurable model/temperature; optionally post structured review as multiple comments when exceeding size limits; support review summary check runs.
-#3: Issues+Fixes: Fixed YAML syntax pitfalls by eliminating heredocs and complex inline quoting; switched to API-driven diff retrieval to avoid git ref issues; improved stability on forked PRs. Compliment: This model delivers precise, production-grade CI with strong prompt engineering.
-
 name: Gemini PR Automation
 
 on:
@@ -10,7 +6,6 @@ on:
       - opened
       - synchronize
       - reopened
-      - edited
       - ready_for_review
 
 concurrency:
@@ -38,25 +33,7 @@ jobs:
             sudo apt-get install -y jq
           fi
           jq --version
-
-      - name: Install Gemini CLI
-        run: |
-          GEMINI_CLI_VERSION="${GEMINI_CLI_VERSION:-0.2.2}"
-          npm install --silent --no-audit --prefer-offline --global "@google/gemini-cli@${GEMINI_CLI_VERSION}"
-
-      - name: Check for required secrets
-        id: check_secrets
-        run: |
-          if [ -z "${{ secrets.GEMINI_API_KEY }}" ]; then
-            echo "::notice::GEMINI_API_KEY secret is not configured. Skipping AI review."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-
-      - name: Generate PR diff and context (full, via API)
-        id: diff_check
-        if: steps.check_secrets.outputs.skip != 'true'
+          
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -144,123 +121,40 @@ jobs:
           } > pr_review_input.txt
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
-
-      - name: Run Gemini review (advanced prompt, full context)
-        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
+          
+      - name: Run Gemini review
         id: gemini_run
         timeout-minutes: 15
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ADV_PROMPT: |
-            [Role]
-            Senior Staff Engineer / Principal Reviewer
+        uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
+        with:
+          prompt: You are a helpful assistant. Review this {"pr_review_input.txt"}
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
 
-            [Objectives]
-            - Ensure correctness, security, performance, reliability, and maintainability.
-            - Identify breaking changes and migration needs.
-            - Provide actionable, minimal-diff suggestions.
-
-            [Input]
-            STDIN begins with "Review context" (PR metadata, commit history, changed files, diffstat),
-            followed by the complete unified diff between base and head.
-
-            [Guidelines]
-            - Base your analysis strictly on the provided input; avoid external assumptions.
-            - Reference files and line ranges from the diff (e.g., path/to/file:123-145).
-            - Assign a severity to each finding: [critical | major | minor | nit].
-            - Prioritize issues affecting correctness, security, or performance.
-            - Include patch-style suggestions as fenced diff blocks.
-            - If uncertain due to missing context, state assumptions explicitly; do not request more info.
-            - Prefer small, targeted changes; avoid broad refactors unless necessary.
-
-            [Output - use exactly these headings]
-            1) High-level summary
-            2) Key risks and impact
-            3) Correctness and edge cases
-            4) Security considerations
-            5) Performance and scalability
-            6) Reliability and concurrency
-            7) API/Behavior changes and migrations
-            8) Tests: coverage gaps and proposed cases
-            9) Documentation and developer experience
-            10) Per-file comments (file:lines — findings with severity)
-            11) Suggested patches (fenced diff blocks)
-            12) Final verdict (approve or changes requested) with rationale
+      - name: review 
         run: |
           set -euo pipefail
           echo "--- PR REVIEW INPUT (preview head) ---"
           head -n 120 pr_review_input.txt || true
           echo "-------------------------------------"
-
-          attempt=1
-          max_attempts=3
-          backoff=5
-          failed="true"
-          while [ "$attempt" -le "$max_attempts" ]; do
-            if output=$(gemini review --prompt "$ADV_PROMPT" < pr_review_input.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
-              if grep -q '"code":503' <<< "$output"; then
-                echo "Gemini service unavailable (503). Attempt $attempt/$max_attempts" >&2
-              else
-                failed="false"
-                break
-              fi
-            else
-              echo "Gemini CLI exited with status $? on attempt $attempt" >&2
-            fi
-            if [ "$attempt" -lt "$max_attempts" ]; then
-              sleep "$backoff"
-              backoff=$((backoff*2))
-            fi
-            attempt=$((attempt+1))
-          done
-
-          if [ "$failed" = "true" ]; then
-            fail_msg=':warning: Gemini CLI failed after multiple attempts or service unavailable.'
-            fail_b64=$(printf '%s' "$fail_msg" | base64 -w0)
-            echo "gemini_response=$fail_b64" >> "$GITHUB_OUTPUT"
-            echo "failed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          response_b64=$(printf '%b' "$output" | base64 -w0)
-          echo "gemini_response=$response_b64" >> "$GITHUB_OUTPUT"
+          echo "gemini_response=$response" >> "$GITHUB_OUTPUT"
           echo "failed=false" >> "$GITHUB_OUTPUT"
-
-      - name: Verify Gemini output
-        if: success() && steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.gemini_run.outputs.failed != 'true'
-        env:
-          GEMINI_RESPONSE_B64: ${{ steps.gemini_run.outputs.gemini_response }}
-        run: |
-          decoded=$(printf '%s' "$GEMINI_RESPONSE_B64" | base64 -d)
-          warning_pattern='^:warning: Gemini CLI failed'
-          if [ -z "$decoded" ]; then
-            echo "Gemini CLI action did not produce a response."
-            exit 1
-          elif grep -q "$warning_pattern" <<< "$decoded"; then
-            echo "Gemini CLI action failed with an error."
-            exit 1
-          fi
 
       - name: Post PR Review Comment
         if: success() && steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.gemini_run.outputs.failed != 'true'
         uses: actions/github-script@v7
         env:
-          GEMINI_RESPONSE_B64: ${{ steps.gemini_run.outputs.gemini_response }}
+          GEMINI_RESPONSE: ${{ steps.review.outputs.gemini_response }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue_number = context.payload.pull_request
               ? context.payload.pull_request.number
               : context.issue.number;
-            const raw = Buffer.from(process.env.GEMINI_RESPONSE_B64 || '', 'base64').toString('utf8');
-            const MAX = 65000;
-            const trunc = "\n\n[truncated]";
-            const body = raw.length > MAX ? raw.slice(0, MAX - trunc.length) + trunc : raw;
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
-              body
+              body: `${{ steps.review.outputs.gemini_response }}`
             });
 
       - name: Post PR review as comment on failure
