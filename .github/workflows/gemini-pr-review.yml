@@ -178,7 +178,7 @@ jobs:
         if: success() && steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.gemini_run.outputs.failed != 'true'
         uses: actions/github-script@v7
         env:
-          GEMINI_RESPONSE: ${{ steps.gemini_run.outputs.gemini_response }}
+          GEMINI_RESPONSE: ${{ steps.review.outputs.gemini_response }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -189,7 +189,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
-              body: `${{ steps.gemini_run.outputs.gemini_response }}`
+              body: `${{ steps.review.outputs.gemini_response }}`
             });
 
       - name: Post PR review as comment on failure
