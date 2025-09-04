@@ -171,9 +171,9 @@ function closePromptModal() {
     document.getElementById("prompt-modal")?.classList.add("hidden");
     // Callback zurücksetzen, um veraltete Referenzen zu vermeiden
     updateState({ promptCallback: null });
-    if (!document.getElementById("task-modal")?.classList.contains("hidden")) {
-        // Do nothing if the task modal is open
-    } else {
-        document.body.classList.remove("modal-open");
-    }
+    const stillOpen = ["task-modal", "memory-game-modal", "quiz-game-modal"].some(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains("hidden");
+    });
+    if (!stillOpen) document.body.classList.remove("modal-open");
 }
