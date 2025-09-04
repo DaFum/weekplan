@@ -50,36 +50,32 @@ export function initEventListeners() {
         // Handle theme toggling
         if (target.closest("#theme-toggle")) toggleTheme();
 
-        // Handle dynamically created elements
+        // Handle task-card actions
         const taskCard = target.closest(".task-card");
         if (taskCard) {
             const taskId = taskCard.dataset.taskId;
-            if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
-                const taskId = taskCard.dataset.taskId;
-                if (!taskId) return;
-                if (target.closest('.task-card-button[data-action="edit"]')) openModal(taskId);
+            if (!taskId) return;
+            if (target.closest('.task-card-button[data-action="edit"]'))   openModal(taskId);
+            if (target.closest('.task-card-button[data-action="toggle"]')) toggleTask(taskId);
+            if (target.closest('.task-card-button[data-action="delete"]')) deleteTask(taskId);
         }
 
         // Handle week navigation
         const navButton = target.closest(".nav-button");
         if (navButton) {
-            showWoche(parseInt(navButton.dataset.weekIndex, 10));
-            if (navButton) {
-                const idx = parseInt(navButton.dataset.weekIndex, 10);
-                if (Number.isFinite(idx)) {
-                    showWoche(idx);
-                }
-            }
+            const idx = parseInt(navButton.dataset.weekIndex, 10);
+            if (Number.isFinite(idx)) showWoche(idx);
+        }
 
-            // Handle quiz answer selection
-            const quizOption = target.closest(".quiz-option");
-            if (quizOption) {
-                const ansIdx = parseInt(quizOption.dataset.index, 10);
-                if (Number.isFinite(ansIdx)) {
-                    checkQuizAnswer(ansIdx);
-                }
-            }
-        const btn = event.target.closest("button");
+        // Handle quiz answer selection
+        const quizOption = target.closest(".quiz-option");
+        if (quizOption) {
+            const ansIdx = parseInt(quizOption.dataset.index, 10);
+            if (Number.isFinite(ansIdx)) checkQuizAnswer(ansIdx);
+        }
+
+        // Ripple on buttons
+        const btn = target.closest("button");
         if (btn && !btn.disabled) createRipple(btn, event);
     });
 
