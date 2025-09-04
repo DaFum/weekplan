@@ -186,7 +186,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
-              body: `{gemini_response}`
+              body: `${{ steps.gemini_run.outputs.gemini_response }}`
             });
 
       - name: Post PR review as comment on failure
