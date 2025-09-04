@@ -139,37 +139,7 @@ jobs:
           echo "--- PR REVIEW INPUT (preview head) ---"
           head -n 120 pr_review_input.txt || true
           echo "-------------------------------------"
-
-          attempt=1
-          max_attempts=3
-          backoff=5
-          failed="true"
-          while [ "$attempt" -le "$max_attempts" ]; do
-            if output=$(gemini review < pr_review_input.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
-              if grep -q '"code":503' <<< "$output"; then
-                echo "Gemini service unavailable (503). Attempt $attempt/$max_attempts" >&2
-              else
-                failed="false"
-                break
-              fi
-            else
-              echo "Gemini CLI exited with status $? on attempt $attempt" >&2
-            fi
-            if [ "$attempt" -lt "$max_attempts" ]; then
-              sleep "$backoff"
-              backoff=$((backoff*2))
-            fi
-            attempt=$((attempt+1))
-          done
-
-          if [ "$failed" = "true" ]; then
-            fail_msg=':warning: Gemini CLI failed after multiple attempts or service unavailable.'
-            fail=$(printf '%s' "$fail_msg")
-            echo "gemini_response=$fail" >> "$GITHUB_OUTPUT"
-            echo "failed=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
+          
           response=$(printf '%b' "$output")
           echo "gemini_response=$response" >> "$GITHUB_OUTPUT"
           echo "failed=false" >> "$GITHUB_OUTPUT"
