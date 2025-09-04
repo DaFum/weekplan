@@ -127,54 +127,10 @@ jobs:
       - name: Run Gemini CLI
         uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
         with:
-          prompt: You are a helpful assistant.
+          prompt: You are a helpful assistant. Review this {"pr_review_input.txt"}
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
 
-
-      - name: Run Gemini review (advanced prompt, full context)
-        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
-        id: gemini_run
-        timeout-minutes: 15
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ADV_PROMPT: |
-            [Role]
-            Senior Staff Engineer / Principal Reviewer
-
-            [Objectives]
-            - Ensure correctness, security, performance, reliability, and maintainability.
-            - Identify breaking changes and migration needs.
-            - Provide actionable, minimal-diff suggestions.
-
-            [Input]
-            STDIN begins with "Review context" (PR metadata, commit history, changed files, diffstat),
-            followed by the complete unified diff between base and head.
-
-            [Content to review]
-            {"pr_review_input.txt"}
-
-            [Guidelines]
-            - Base your analysis strictly on the provided input; avoid external assumptions.
-            - Reference files and line ranges from the diff (e.g., path/to/file:123-145).
-            - Assign a severity to each finding: [critical | major | minor | nit].
-            - Prioritize issues affecting correctness, security, or performance.
-            - Include patch-style suggestions as fenced diff blocks.
-            - If uncertain due to missing context, state assumptions explicitly; do not request more info.
-            - Prefer small, targeted changes; avoid broad refactors unless necessary.
-
-            [Output - use exactly these headings]
-            1) High-level summary
-            2) Key risks and impact
-            3) Correctness and edge cases
-            4) Security considerations
-            5) Performance and scalability
-            6) Reliability and concurrency
-            7) API/Behavior changes and migrations
-            8) Tests: coverage gaps and proposed cases
-            9) Documentation and developer experience
-            10) Per-file comments (file:lines — findings with severity)
-            11) Suggested patches (fenced diff blocks)
-            12) Final verdict (approve or changes requested) with rationale
+      - name: review 
         run: |
           set -euo pipefail
           echo "--- PR REVIEW INPUT (preview head) ---"
