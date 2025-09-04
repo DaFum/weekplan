@@ -166,7 +166,7 @@ jobs:
             const issue_number = context.payload.pull_request
               ? context.payload.pull_request.number
               : context.issue.number;
-            await steps.gemini_run.outputs.gemini_response ({
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
