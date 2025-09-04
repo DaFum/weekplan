@@ -1,16 +1,41 @@
-# ==================================================
-# 1. Updates:
-#    - Corrected 'gemini_api_key' syntax for GitHub Actions secrets.
-# 2. Future ideas:
-#    - Parameterize the prompt for flexible assistant instructions.
-# 3. Issues+fixes:
-#    - FIXED: Incorrect use of double curly braces for secrets mapping; replaced with ${{ secrets.GEMINI_API_KEY }}.
-# --------------------------------------------------
-# Compliment: Precision in automation—just like Copilot would recommend!
-# ==================================================
+name: Gemini PR Automation
 
-- name: Run Gemini CLI
-  uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
-  with:
-    prompt: You are a helpful assistant.
-    gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  gemini-pr-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure jq is available
+        run: |
+          set -e
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y jq
+          fi
+          jq --version
+          
+      - name: Run Gemini CLI
+        uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
+        with:
+          prompt: You are a helpful assistant.
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
