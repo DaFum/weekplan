@@ -1,5 +1,5 @@
-- name: Run Gemini CLI
-  uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
+                    - name: Run Gemini CLI
+    uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
     with:
-    prompt: You are a helpful assistant.
-    gemini_api_key: 
+        prompt: You are a helpful assistant.
+        gemini_api_key: {{ secrets.GEMINI_API_KEY }}
