@@ -145,7 +145,7 @@ jobs:
           backoff=5
           failed="true"
           while [ "$attempt" -le "$max_attempts" ]; do
-            if output=$(gemini review --prompt "$ADV_PROMPT" < pr_review_input.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
+            if output=$(gemini review < pr_review_input.txt 2>&1 | sed -E 's/\x1B\[[0-9;]*[mK]//g'); then
               if grep -q '"code":503' <<< "$output"; then
                 echo "Gemini service unavailable (503). Attempt $attempt/$max_attempts" >&2
               else
