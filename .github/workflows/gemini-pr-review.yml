@@ -139,8 +139,6 @@ jobs:
           echo "--- PR REVIEW INPUT (preview head) ---"
           head -n 120 pr_review_input.txt || true
           echo "-------------------------------------"
-          
-          response=$(printf '%b' "$output")
           echo "gemini_response=$response" >> "$GITHUB_OUTPUT"
           echo "failed=false" >> "$GITHUB_OUTPUT"
 
