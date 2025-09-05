@@ -130,18 +130,23 @@ jobs:
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
+      - name: Read review input file
+        id: file_reader
+        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
+        run: echo "content=$(cat pr_review_input.txt)" >> $GITHUB_OUTPUT
+
       - name: Run Gemini review
         id: gemini_run
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         timeout-minutes: 15
         uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
         with:
-          prompt: You are a helpful assistant. Review this {"pr_review_input.txt"}
+          prompt: "Review this: ${{ steps.file_reader.outputs.content }}"
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
 
       - name: review
         id: review
-        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
+        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.gemini_run.outputs.failed != 'true'
         env:
           response: ${{ steps.gemini_run.outputs.response }}
         run: |
@@ -154,8 +159,6 @@ jobs:
       - name: Post PR Review Comment
         if: success() && steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.gemini_run.outputs.failed != 'true'
         uses: actions/github-script@v7
-        env:
-          GEMINI_RESPONSE: ${{ steps.review.outputs.gemini_response }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -166,7 +169,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
-              body: process.env.GEMINI_RESPONSE
+              body: `${{ steps.review.outputs.gemini_response }}`
             });
 
       - name: Post PR review as comment on failure
