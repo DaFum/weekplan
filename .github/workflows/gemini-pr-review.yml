@@ -33,7 +33,22 @@ jobs:
             sudo apt-get install -y jq
           fi
           jq --version
-          
+
+      - name: Check Gemini API key
+        id: check_secrets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::notice::GEMINI_API_KEY not found. Skipping Gemini review."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare PR review input
+        id: diff_check
+        if: steps.check_secrets.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -53,7 +68,6 @@ jobs:
 
           API="https://api.github.com/repos/${REPO}"
 
-          # Fetch full unified diff (robust for forks)
           curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github.v3.diff" \
             "$DIFF_URL" > pr_diff_full.txt
 
@@ -63,8 +77,6 @@ jobs:
             exit 0
           fi
 
-          # Copy to pr_diff.txt for downstream processing: if the diff is too large for the AI model or later steps, pr_diff.txt may be truncated to fit input size limits.
-          # This ensures pr_diff_full.txt always contains the complete diff, while pr_diff.txt can be safely modified or truncated as needed.
           cp pr_diff_full.txt pr_diff.txt
 
           echo "::group::Gemini input meta"
@@ -72,13 +84,11 @@ jobs:
           echo "SHA256: $(sha256sum pr_diff.txt | cut -d' ' -f1)"
           echo "::endgroup::"
 
-          # Fetch changed files (name/status/additions/deletions)
           curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
             "$API/pulls/$PR_NUMBER/files?per_page=100" > pr_files.json
 
           jq -r '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
 
-          # Build a diffstat-like summary
           total_add=$(jq '[.[].additions] | add // 0' pr_files.json)
           total_del=$(jq '[.[].deletions] | add // 0' pr_files.json)
           count_files=$(jq 'length' pr_files.json)
@@ -87,14 +97,12 @@ jobs:
             jq -r '.[] | "\(.filename): +\(.additions) -\(.deletions)"' pr_files.json
           } > pr_diffstat.txt
 
-          # Fetch commit history for the PR
           curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
             "$API/pulls/$PR_NUMBER/commits?per_page=250" > pr_commits.json
 
           jq -r '.[] | "\(.sha[0:7]) \(.commit.author.date) \(.commit.author.name) - \(.commit.message | gsub("\\n"; " "))"' \
             pr_commits.json > pr_commits.txt
 
-          # Assemble single input for the reviewer
           {
             echo "# Review context"
             echo "PR: #$PR_NUMBER - $PR_TITLE"
@@ -121,23 +129,27 @@ jobs:
           } > pr_review_input.txt
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
-          
+
       - name: Run Gemini review
         id: gemini_run
+        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         timeout-minutes: 15
         uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
         with:
           prompt: You are a helpful assistant. Review this {"pr_review_input.txt"}
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
 
-      - name: review 
+      - name: review
+        id: review
+        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
+        env:
+          response: ${{ steps.gemini_run.outputs.response }}
         run: |
           set -euo pipefail
           echo "--- PR REVIEW INPUT (preview head) ---"
           head -n 120 pr_review_input.txt || true
           echo "-------------------------------------"
           echo "gemini_response=$response" >> "$GITHUB_OUTPUT"
-          echo "failed=false" >> "$GITHUB_OUTPUT"
 
       - name: Post PR Review Comment
         if: success() && steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.gemini_run.outputs.failed != 'true'
@@ -154,7 +166,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number,
-              body: `${{ steps.review.outputs.gemini_response }}`
+              body: process.env.GEMINI_RESPONSE
             });
 
       - name: Post PR review as comment on failure
