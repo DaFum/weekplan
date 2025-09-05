@@ -146,10 +146,12 @@ jobs:
         continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CI: true
         run: |
           set -euo pipefail
           PROMPT=$(cat pr_review_input.txt)
-          RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 --yolo --prompt "$PROMPT" || true)
+          RAW_RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 --yolo --prompt "$PROMPT" 2>&1 || true)
+          RESPONSE=$(printf "%s" "$RAW_RESPONSE" | perl -pe 's/\e\[[\d;]*[A-Za-z]//g' | tr -d '\r')
           {
             echo "gemini_response<<EOF"
             printf "%s\n" "$RESPONSE"
@@ -179,6 +181,8 @@ jobs:
       - name: Post PR review as comment on failure
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.review.outputs.gemini_response == ''
         uses: actions/github-script@v7
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -190,5 +194,5 @@ jobs:
               repo: context.repo.repo,
               issue_number,
               body: ':warning: Gemini review skipped: model unavailable or CLI failure. See the Actions tab for details: ' +
-                `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+                process.env.RUN_URL
             });
