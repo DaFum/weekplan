@@ -149,7 +149,11 @@ jobs:
 
       - name: review
         id: review
-        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true' && steps.gemini_run.outputs.failed != 'true'
+        {
+          echo 'gemini_response<<EOF'
+          echo "$response"
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
         env:
           response: ${{ steps.gemini_run.outputs.response }}
         run: |
