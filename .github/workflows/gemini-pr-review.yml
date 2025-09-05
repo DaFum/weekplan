@@ -140,31 +140,19 @@ jobs:
           echo "$delimiter" >> $GITHUB_OUTPUT
 
       - name: Run Gemini review
-        id: gemini_run
+        id: review
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
         timeout-minutes: 15
         continue-on-error: true
-        uses: google-github-actions/run-gemini-cli@68d5a6d2e31ff01029205c58c6bf81cb3d72910b
-        with:
-          prompt: ${{ steps.read_pr_input.outputs.pr_input }}
-          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-
-      - name: Capture Gemini response
-        id: review
-        if: >
-          steps.check_secrets.outputs.skip != 'true' &&
-          steps.diff_check.outputs.skip != 'true' &&
-          steps.gemini_run.outputs.response != ''
         env:
-          RESPONSE: ${{ steps.gemini_run.outputs.response }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -euo pipefail
-          echo "--- PR REVIEW INPUT (preview head) ---"
-          head -n 120 pr_review_input.txt || true
-          echo "-------------------------------------"
+          PROMPT=$(cat pr_review_input.txt)
+          RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 --yolo --prompt "$PROMPT" || true)
           {
             echo "gemini_response<<EOF"
-            printf "%s\n" "${RESPONSE}"
+            printf "%s\n" "$RESPONSE"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
