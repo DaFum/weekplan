@@ -157,6 +157,8 @@ jobs:
             env:
               GEMINI_RESPONSE: ${{ steps.review.outputs.gemini_response }}
             with:
+              GEMINI_RESPONSE: ${{ steps.review.outputs.gemini_response }}
+            with:
           head -n 120 pr_review_input.txt || true
           echo "-------------------------------------"
           echo "gemini_response=$response" >> "$GITHUB_OUTPUT"
