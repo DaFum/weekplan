@@ -84,23 +84,39 @@ jobs:
           echo "SHA256: $(sha256sum pr_diff.txt | cut -d' ' -f1)"
           echo "::endgroup::"
 
-          curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "$API/pulls/$PR_NUMBER/files?per_page=100" > pr_files.json
+          : > pr_files.json
+          page=1
+          while true; do
+            resp="$(curl -sSsfL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$API/pulls/$PR_NUMBER/files?per_page=100&page=$page")" || break
+            count="$(printf '%s' "$resp" | jq 'length')"
+            [ "$count" -eq 0 ] && break
+            printf '%s\n' "$resp" | jq -c '.[]' >> pr_files.json
+            page=$((page+1))
+          done
 
-          jq -r '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
+          jq -rs '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
 
-          total_add=$(jq '[.[].additions] | add // 0' pr_files.json)
-          total_del=$(jq '[.[].deletions] | add // 0' pr_files.json)
-          count_files=$(jq 'length' pr_files.json)
+          total_add=$(jq -s '[.[].additions] | add // 0' pr_files.json)
+          total_del=$(jq -s '[.[].deletions] | add // 0' pr_files.json)
+          count_files=$(jq -s 'length' pr_files.json)
           {
             echo "Files changed: $count_files, insertions(+): $total_add, deletions(-): $total_del"
-            jq -r '.[] | "\(.filename): +\(.additions) -\(.deletions)"' pr_files.json
+            jq -rs '.[] | "\(.filename): +\(.additions) -\(.deletions)"' pr_files.json
           } > pr_diffstat.txt
 
-          curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "$API/pulls/$PR_NUMBER/commits?per_page=250" > pr_commits.json
+          : > pr_commits.json
+          page=1
+          while true; do
+            resp="$(curl -sSsfL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$API/pulls/$PR_NUMBER/commits?per_page=100&page=$page")" || break
+            count="$(printf '%s' "$resp" | jq 'length')"
+            [ "$count" -eq 0 ] && break
+            printf '%s\n' "$resp" | jq -c '.[]' >> pr_commits.json
+            page=$((page+1))
+          done
 
-          jq -r '.[] | "\(.sha[0:7]) \(.commit.author.date) \(.commit.author.name) - \(.commit.message | gsub("\\n"; " "))"' \
+          jq -rs '.[] | "\(.sha[0:7]) \(.commit.author.date) \(.commit.author.name) - \(.commit.message | gsub("\\n"; " "))"' \
             pr_commits.json > pr_commits.txt
 
           {
