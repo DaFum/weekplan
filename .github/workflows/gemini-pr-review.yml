@@ -84,22 +84,28 @@ jobs:
           echo "SHA256: $(sha256sum pr_diff.txt | cut -d' ' -f1)"
           echo "::endgroup::"
 
-          : > pr_files.json
-          page=1
-          while true; do
-            resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$API/pulls/$PR_NUMBER/files?per_page=100&page=$page")"
-            resp="$(printf '%s' "$resp_and_code" | sed '$d')"
-            status="$(printf '%s' "$resp_and_code" | tail -n1)"
-            if [ "$status" -ne 200 ]; then
-              echo "::warning::GitHub API returned HTTP $status for page $page. Stopping file fetch."
-              break
-            fi
-            count="$(printf '%s' "$resp" | jq 'length')"
-            [ "$count" -eq 0 ] && break
-            printf '%s\n' "$resp" | jq -c '.[]' >> pr_files.json
-            page=$((page+1))
-          done
+          fetch_paginated() {
+            local endpoint="$1"
+            local output="$2"
+            : > "$output"
+            local page=1
+            while true; do
+              resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "$API/$endpoint?per_page=100&page=$page")"
+              resp="$(printf '%s' "$resp_and_code" | sed '$d')"
+              status="$(printf '%s' "$resp_and_code" | tail -n1)"
+              if [ "$status" -ne 200 ]; then
+                echo "::error::GitHub API returned HTTP $status for $endpoint (page $page)"
+                return 1
+              fi
+              count="$(printf '%s' "$resp" | jq 'length')"
+              [ "$count" -eq 0 ] && break
+              printf '%s\n' "$resp" | jq -c '.[]' >> "$output"
+              page=$((page+1))
+            done
+          }
+
+          fetch_paginated "pulls/$PR_NUMBER/files" pr_files.json
 
           jq -rs '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
 
@@ -111,22 +117,7 @@ jobs:
             jq -rs '.[] | "\(.filename): +\(.additions) -\(.deletions)"' pr_files.json
           } > pr_diffstat.txt
 
-          : > pr_commits.json
-          page=1
-          while true; do
-            resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$API/pulls/$PR_NUMBER/commits?per_page=100&page=$page")"
-            resp="$(printf '%s' "$resp_and_code" | sed '$d')"
-            http_code="$(printf '%s' "$resp_and_code" | tail -n1)"
-            if [ "$http_code" -ne 200 ]; then
-              echo "Error: GitHub API returned status $http_code for commits endpoint (page $page)" >&2
-              break
-            fi
-            count="$(printf '%s' "$resp" | jq 'length')"
-            [ "$count" -eq 0 ] && break
-            printf '%s\n' "$resp" | jq -c '.[]' >> pr_commits.json
-            page=$((page+1))
-          done
+          fetch_paginated "pulls/$PR_NUMBER/commits" pr_commits.json
 
           jq -rs '.[] | "\(.sha[0:7]) \(.commit.author.date) \(.commit.author.name) - \(.commit.message | gsub("\\n"; " "))"' \
             pr_commits.json > pr_commits.txt
