@@ -87,8 +87,14 @@ jobs:
           : > pr_files.json
           page=1
           while true; do
-            resp="$(curl -sSsfL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$API/pulls/$PR_NUMBER/files?per_page=100&page=$page")" || break
+            http_resp="$(curl -sSL -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$API/pulls/$PR_NUMBER/files?per_page=100&page=$page")"
+            resp="${http_resp%[0-9][0-9][0-9]}"
+            status="${http_resp:${#resp}}"
+            if [ "$status" -ne 200 ]; then
+              echo "::warning::GitHub API returned HTTP $status for page $page. Stopping file fetch."
+              break
+            fi
             count="$(printf '%s' "$resp" | jq 'length')"
             [ "$count" -eq 0 ] && break
             printf '%s\n' "$resp" | jq -c '.[]' >> pr_files.json
