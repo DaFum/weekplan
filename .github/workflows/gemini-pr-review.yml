@@ -105,7 +105,10 @@ jobs:
             done
           }
 
-          fetch_paginated "pulls/$PR_NUMBER/files" pr_files.json
+          if ! fetch_paginated "pulls/$PR_NUMBER/files" pr_files.json; then
+            echo "::error::Failed to fetch PR files"
+            exit 1
+          fi
 
           jq -rs '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
 
