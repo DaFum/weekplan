@@ -87,7 +87,13 @@ jobs:
           fetch_paginated() {
             local endpoint="$1"
             local output="$2"
+  
+            if ! touch "$output" 2>/dev/null; then
+              echo "::error::Cannot write to output file: $output"
+              return 1
+            fi
             : > "$output"
+  
             local page=1
             while true; do
               resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
@@ -98,7 +104,10 @@ jobs:
                 echo "::error::GitHub API returned HTTP $status for $endpoint (page $page)"
                 return 1
               fi
-              count="$(printf '%s' "$resp" | jq 'length')"
+              if ! count="$(printf '%s' "$resp" | jq 'length' 2>/dev/null)"; then
+                echo "::error::Invalid JSON response from GitHub API for $endpoint (page $page)"
+                return 1
+              fi
               [ "$count" -eq 0 ] && break
               printf '%s\n' "$resp" | jq -c '.[]' >> "$output"
               page=$((page+1))
