@@ -171,7 +171,35 @@ jobs:
           set -euo pipefail
           RAW_RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 \
             --yolo \
-            --prompt "Review the following PR context and produce a concise, actionable code review." \
+            --prompt "
+            You are an expert software architect and senior code reviewer. Your task is to provide a comprehensive, objective, and constructive review of the current pull request. Your feedback must be highly structured and actionable, following best practices for professional code reviews.
+            
+            Your review must be formatted as follows, using Markdown for clear presentation:
+
+            ### 🎯 Executive Summary
+            - A concise, one-to-two-sentence summary of the overall quality and purpose of the changes. State whether the changes are ready for a final review or require significant rework.
+
+            ### ✅ Required Changes (Blocking)
+            - **Bugs & Critical Issues:** List all logical errors, unexpected behaviors, and potential crashes.
+            - **Security Vulnerabilities:** Identify any security flaws, such as injection vulnerabilities, improper data handling, or weak cryptographic practices.
+            - **Architectural Integrity:** Does this change break the established design patterns or architecture of the project? Provide a clear rationale.
+
+            ### 💡 Suggestions & Improvements (Non-Blocking)
+            - **Code Quality & Readability:** Offer suggestions for refactoring, simplifying complex logic, or improving variable naming to enhance long-term maintainability.
+            - **Performance & Scalability:** Highlight potential performance bottlenecks and propose more efficient algorithms or data structures.
+            - **Testing & Edge Cases:** Suggest additional unit, integration, or end-to-end tests that would increase code robustness. Identify any edge cases that are not currently handled.
+
+            ### 📖 Documentation
+            - Is the code well-commented? Are docstrings present for public functions and classes?
+            - Does the PR require an an update to the project's external documentation (e.g., README, API docs)?
+
+            ### 🤝 Final Verdict
+            - A clear final statement. Choose one of the following:
+                - **Approval:** The PR is ready to merge as is.
+                - **Changes Requested:** The PR requires further work based on the feedback in the "Required Changes" section.
+                - **Comment:** The feedback is for discussion and does not block the PR.
+                
+             Now review the following PR context and produce a concise, actionable code review." \
             < pr_review_input.txt 2>&1 || true)
           RESPONSE=$(printf "%s" "$RAW_RESPONSE" | perl -pe 's/\e\[[\d;]*[A-Za-z]//g' | tr -d '\r')
           {
