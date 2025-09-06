@@ -84,22 +84,46 @@ jobs:
           echo "SHA256: $(sha256sum pr_diff.txt | cut -d' ' -f1)"
           echo "::endgroup::"
 
-          : > pr_files.json
-          page=1
-          while true; do
-            resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$API/pulls/$PR_NUMBER/files?per_page=100&page=$page")"
-            resp="$(printf '%s' "$resp_and_code" | sed '$d')"
-            status="$(printf '%s' "$resp_and_code" | tail -n1)"
-            if [ "$status" -ne 200 ]; then
-              echo "::warning::GitHub API returned HTTP $status for page $page. Stopping file fetch."
-              break
+          # fetch_paginated: Fetches paginated results from a GitHub API endpoint.
+          # Parameters:
+          #   $1 (endpoint): The API endpoint (relative to $API) to fetch.
+          #   $2 (output): The file to write the concatenated JSON objects to.
+          # Returns:
+          #   0 on success, 1 on error (if a non-200 HTTP status is returned).
+          fetch_paginated() {
+            local endpoint="$1"
+            local output="$2"
+  
+            if ! touch "$output" 2>/dev/null; then
+              echo "::error::Cannot write to output file: $output"
+              return 1
             fi
-            count="$(printf '%s' "$resp" | jq 'length')"
-            [ "$count" -eq 0 ] && break
-            printf '%s\n' "$resp" | jq -c '.[]' >> pr_files.json
-            page=$((page+1))
-          done
+            : > "$output"
+  
+            local page=1
+            while true; do
+              resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "$API/$endpoint?per_page=100&page=$page")"
+              resp="$(printf '%s' "$resp_and_code" | sed '$d')"
+              status="$(printf '%s' "$resp_and_code" | tail -n1)"
+              if [ "$status" -ne 200 ]; then
+                echo "::error::Failed to fetch GitHub API $endpoint (page $page): HTTP $status"
+                return 1
+              fi
+              if ! count="$(printf '%s' "$resp" | jq 'length' 2>/dev/null)"; then
+                echo "::error::Invalid JSON response from GitHub API for $endpoint (page $page)"
+                return 1
+              fi
+              [ "$count" -eq 0 ] && break
+              printf '%s\n' "$resp" | jq -c '.[]' >> "$output"
+              page=$((page+1))
+            done
+          }
+
+          if ! fetch_paginated "pulls/$PR_NUMBER/files" pr_files.json; then
+            echo "::error::Failed to fetch PR files"
+            exit 1
+          fi
 
           jq -rs '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
 
@@ -111,22 +135,7 @@ jobs:
             jq -rs '.[] | "\(.filename): +\(.additions) -\(.deletions)"' pr_files.json
           } > pr_diffstat.txt
 
-          : > pr_commits.json
-          page=1
-          while true; do
-            resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$API/pulls/$PR_NUMBER/commits?per_page=100&page=$page")"
-            resp="$(printf '%s' "$resp_and_code" | sed '$d')"
-            http_code="$(printf '%s' "$resp_and_code" | tail -n1)"
-            if [ "$http_code" -ne 200 ]; then
-              echo "Error: GitHub API returned status $http_code for commits endpoint (page $page)" >&2
-              break
-            fi
-            count="$(printf '%s' "$resp" | jq 'length')"
-            [ "$count" -eq 0 ] && break
-            printf '%s\n' "$resp" | jq -c '.[]' >> pr_commits.json
-            page=$((page+1))
-          done
+          fetch_paginated "pulls/$PR_NUMBER/commits" pr_commits.json
 
           jq -rs '.[] | "\(.sha[0:7]) \(.commit.author.date) \(.commit.author.name) - \(.commit.message | gsub("\\n"; " "))"' \
             pr_commits.json > pr_commits.txt
