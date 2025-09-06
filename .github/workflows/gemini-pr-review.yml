@@ -107,7 +107,7 @@ jobs:
               resp="$(printf '%s' "$resp_and_code" | sed '$d')"
               status="$(printf '%s' "$resp_and_code" | tail -n1)"
               if [ "$status" -ne 200 ]; then
-                echo "::error::GitHub API returned HTTP $status for $endpoint (page $page)"
+                echo "::error::Failed to fetch GitHub API $endpoint (page $page): HTTP $status"
                 return 1
               fi
               if ! count="$(printf '%s' "$resp" | jq 'length' 2>/dev/null)"; then
