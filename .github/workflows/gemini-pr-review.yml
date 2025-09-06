@@ -84,23 +84,60 @@ jobs:
           echo "SHA256: $(sha256sum pr_diff.txt | cut -d' ' -f1)"
           echo "::endgroup::"
 
-          curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "$API/pulls/$PR_NUMBER/files?per_page=100" > pr_files.json
+          # fetch_paginated: Fetches paginated results from a GitHub API endpoint.
+          # Parameters:
+          #   $1 (endpoint): The API endpoint (relative to $API) to fetch.
+          #   $2 (output): The file to write the concatenated JSON objects to.
+          # Returns:
+          #   0 on success, 1 on error (if a non-200 HTTP status is returned).
+          fetch_paginated() {
+            local endpoint="$1"
+            local output="$2"
+  
+            if ! touch "$output" 2>/dev/null; then
+              echo "::error::Cannot write to output file: $output"
+              return 1
+            fi
+            : > "$output"
+  
+            local page=1
+            while true; do
+              resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "$API/$endpoint?per_page=100&page=$page")"
+              resp="$(printf '%s' "$resp_and_code" | sed '$d')"
+              status="$(printf '%s' "$resp_and_code" | tail -n1)"
+              if [ "$status" -ne 200 ]; then
+                echo "::error::Failed to fetch GitHub API $endpoint (page $page): HTTP $status"
+                return 1
+              fi
+              if ! count="$(printf '%s' "$resp" | jq 'length' 2>/dev/null)"; then
+                echo "::error::Invalid JSON response from GitHub API for $endpoint (page $page)"
+                return 1
+              fi
+              [ "$count" -eq 0 ] && break
+              printf '%s\n' "$resp" | jq -c '.[]' >> "$output"
+              page=$((page+1))
+            done
+          }
 
-          jq -r '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
+          if ! fetch_paginated "pulls/$PR_NUMBER/files" pr_files.json; then
+            echo "::error::Failed to fetch PR files"
+            exit 1
+          fi
 
-          total_add=$(jq '[.[].additions] | add // 0' pr_files.json)
-          total_del=$(jq '[.[].deletions] | add // 0' pr_files.json)
-          count_files=$(jq 'length' pr_files.json)
+          jq -rs '.[] | "\(.status)\t\(.filename)\t(+\(.additions) -\(.deletions))"' pr_files.json > pr_files.txt
+
+          total_add=$(jq -s '[.[].additions] | add // 0' pr_files.json)
+          total_del=$(jq -s '[.[].deletions] | add // 0' pr_files.json)
+          count_files=$(jq -s 'length' pr_files.json)
           {
             echo "Files changed: $count_files, insertions(+): $total_add, deletions(-): $total_del"
-            jq -r '.[] | "\(.filename): +\(.additions) -\(.deletions)"' pr_files.json
+            jq -rs '.[] | "\(.filename): +\(.additions) -\(.deletions)"' pr_files.json
           } > pr_diffstat.txt
 
-          curl -sSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-            "$API/pulls/$PR_NUMBER/commits?per_page=250" > pr_commits.json
+          fetch_paginated "pulls/$PR_NUMBER/commits" pr_commits.json
 
-          jq -r '.[] | "\(.sha[0:7]) \(.commit.author.date) \(.commit.author.name) - \(.commit.message | gsub("\\n"; " "))"' \
+          jq -rs '.[] | "\(.sha[0:7]) \(.commit.author.date) \(.commit.author.name) - \(.commit.message | gsub("\\n"; " "))"' \
             pr_commits.json > pr_commits.txt
 
           {
@@ -130,15 +167,6 @@ jobs:
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
-      - name: Read PR review input file
-        id: read_pr_input
-        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
-        run: |
-          delimiter="EOF$(date +%s)"
-          echo "pr_input<<$delimiter" >> $GITHUB_OUTPUT
-          cat pr_review_input.txt >> $GITHUB_OUTPUT
-          echo "$delimiter" >> $GITHUB_OUTPUT
-
       - name: Run Gemini review
         id: review
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
@@ -150,8 +178,42 @@ jobs:
           NODE_NO_WARNINGS: 1
         run: |
           set -euo pipefail
-          PROMPT=$(cat pr_review_input.txt)
-          RAW_RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 --yolo --prompt "$PROMPT" 2>&1 || true)
+          RAW_RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 \
+          --yolo \
+          --prompt-interactive <<EOF
+
+          You are an expert software architect and senior code reviewer. Your task is to provide a comprehensive, objective, and constructive review of the current pull request. Your feedback must be highly structured and actionable, following best practices for professional code reviews.
+
+          Your review must be formatted as follows, using Markdown for clear presentation:
+
+          ### 🎯 Executive Summary
+          - A concise, one-to-two-sentence summary of the overall quality and purpose of the changes. State whether the changes are ready for a final review or require significant rework.
+
+          ### ✅ Required Changes (Blocking)
+          - **Bugs & Critical Issues:** List all logical errors, unexpected behaviors, and potential crashes.
+          - **Security Vulnerabilities:** Identify any security flaws, such as injection vulnerabilities, improper data handling, or weak cryptographic practices.
+          - **Architectural Integrity:** Does this change break the established design patterns or architecture of the project? Provide a clear rationale.
+
+          ### 💡 Suggestions & Improvements (Non-Blocking)
+          - **Code Quality & Readability:** Offer suggestions for refactoring, simplifying complex logic, or improving variable naming to enhance long-term maintainability.
+          - **Performance & Scalability:** Highlight potential performance bottlenecks and propose more efficient algorithms or data structures.
+          - **Testing & Edge Cases:** Suggest additional unit, integration, or end-to-end tests that would increase code robustness. Identify any edge cases that are not currently handled.
+
+          ### 📖 Documentation
+          - Is the code well-commented? Are docstrings present for public functions and classes?
+          - Does the PR require an an update to the project's external documentation (e.g., README, API docs)?
+
+          ### 🤝 Final Verdict
+          - A clear final statement. Choose one of the following:
+                - **Approval:** The PR is ready to merge as is.
+                - **Changes Requested:** The PR requires further work based on the feedback in the "Required Changes" section.
+                - **Comment:** The feedback is for discussion and does not block the PR.
+                
+          Now review the following PR context and produce a concise, actionable code review.
+
+          "$(cat pr_review_input.txt)"
+          EOF
+          2>&1 || true)
           RESPONSE=$(printf "%s" "$RAW_RESPONSE" | perl -pe 's/\e\[[\d;]*[A-Za-z]//g' | tr -d '\r')
           {
             echo "gemini_response<<EOF"
