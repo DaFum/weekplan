@@ -130,15 +130,6 @@ jobs:
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
-      - name: Read PR review input file
-        id: read_pr_input
-        if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
-        run: |
-          delimiter="EOF$(date +%s)"
-          echo "pr_input<<$delimiter" >> $GITHUB_OUTPUT
-          cat pr_review_input.txt >> $GITHUB_OUTPUT
-          echo "$delimiter" >> $GITHUB_OUTPUT
-
       - name: Run Gemini review
         id: review
         if: steps.check_secrets.outputs.skip != 'true' && steps.diff_check.outputs.skip != 'true'
