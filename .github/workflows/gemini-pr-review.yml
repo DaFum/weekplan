@@ -84,6 +84,12 @@ jobs:
           echo "SHA256: $(sha256sum pr_diff.txt | cut -d' ' -f1)"
           echo "::endgroup::"
 
+          # fetch_paginated: Fetches paginated results from a GitHub API endpoint.
+          # Parameters:
+          #   $1 (endpoint): The API endpoint (relative to $API) to fetch.
+          #   $2 (output): The file to write the concatenated JSON objects to.
+          # Returns:
+          #   0 on success, 1 on error (if a non-200 HTTP status is returned).
           fetch_paginated() {
             local endpoint="$1"
             local output="$2"
