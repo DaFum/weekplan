@@ -150,8 +150,10 @@ jobs:
           NODE_NO_WARNINGS: 1
         run: |
           set -euo pipefail
-          PROMPT=$(cat pr_review_input.txt)
-          RAW_RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 --yolo --prompt "$PROMPT" 2>&1 || true)
+          RAW_RESPONSE=$(npx --yes @google/gemini-cli@0.3.2 \
+            --yolo \
+            --prompt "Review the following PR context and produce a concise, actionable code review." \
+            < pr_review_input.txt 2>&1 || true)
           RESPONSE=$(printf "%s" "$RAW_RESPONSE" | perl -pe 's/\e\[[\d;]*[A-Za-z]//g' | tr -d '\r')
           {
             echo "gemini_response<<EOF"
