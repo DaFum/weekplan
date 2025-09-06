@@ -108,8 +108,14 @@ jobs:
           : > pr_commits.json
           page=1
           while true; do
-            resp="$(curl -sSsfL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$API/pulls/$PR_NUMBER/commits?per_page=100&page=$page")" || break
+            resp_and_code="$(curl -sSL -w '\n%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$API/pulls/$PR_NUMBER/commits?per_page=100&page=$page")"
+            resp="$(printf '%s' "$resp_and_code" | sed '$d')"
+            http_code="$(printf '%s' "$resp_and_code" | tail -n1)"
+            if [ "$http_code" -ne 200 ]; then
+              echo "Error: GitHub API returned status $http_code for commits endpoint (page $page)" >&2
+              break
+            fi
             count="$(printf '%s' "$resp" | jq 'length')"
             [ "$count" -eq 0 ] && break
             printf '%s\n' "$resp" | jq -c '.[]' >> pr_commits.json
