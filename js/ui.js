@@ -569,7 +569,7 @@ export function renderTaskModal(state, taskId = null) {
 
         if (durationInput) {
             durationInput.value = taskToEdit.kategorie === "pc"
-                ? String(taskToEdit.durationInMinutes ?? "")
+                ? String(taskToEdit.durationInMinutes ?? 0)
                 : "";
         }
     } else {
