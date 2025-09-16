@@ -73,12 +73,14 @@ export function saveTask(event) {
         if (errorEl) {
             errorEl.textContent = "Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.";
         }
+        nameEl?.setAttribute("aria-invalid", "true");
         return;
     } else {
         const errorEl = document.getElementById("task-name-error");
         if (errorEl) {
             errorEl.textContent = "";
         }
+        nameEl?.removeAttribute("aria-invalid");
     }
 
     const taskData = {

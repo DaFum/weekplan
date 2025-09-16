@@ -101,7 +101,10 @@
                     <label for="task-name" class="form-label">Was steht an?</label>
                     <input type="text" id="task-name"
                            placeholder="z. B. Mathe Hausaufgaben"
-                           class="form-input" required>
+                           class="form-input"
+                           aria-describedby="task-name-error"
+                           required>
+                    <p id="task-name-error" class="form-error" aria-live="polite"></p>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Kategorie</label>
