@@ -156,13 +156,17 @@ function renderWeeklyGoalTrackerStructure() {
  */
 export function updateWeeklyGoalTracker(state) {
     const { tasks, wochenZiel } = state;
+    const tasksArray = Array.isArray(tasks) ? tasks : [];
     const startOfWeek = getStartOfWeek(new Date());
     const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
-    const tasksDone = tasks.filter(t => t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek)).length;
+    const tasksDone = tasksArray.filter(t => t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek)).length;
     const progress = wochenZiel > 0 ? Math.min((tasksDone / wochenZiel) * 100, 100) : 0;
 
-    document.getElementById("weekly-goal-text").textContent = `${tasksDone} / ${wochenZiel} Aufgaben`;
-    document.getElementById("weekly-goal-progress-bar").style.width = `${progress}%`;
+    const goalTextEl = document.getElementById("weekly-goal-text");
+    if (goalTextEl) goalTextEl.textContent = `${tasksDone} / ${wochenZiel} Aufgaben`;
+
+    const goalBarEl = document.getElementById("weekly-goal-progress-bar");
+    if (goalBarEl) goalBarEl.style.width = `${progress}%`;
 }
 
 /**
@@ -182,7 +186,11 @@ function renderStreakTrackerStructure() {
  * @param {Object} state - The application state.
  */
 export function updateStreakTracker(state) {
-    document.getElementById("streak-value").textContent = getCurrentStreak(state.tasks);
+    const streakValueEl = document.getElementById("streak-value");
+    if (streakValueEl) {
+        const safeTasks = Array.isArray(state.tasks) ? state.tasks : [];
+        streakValueEl.textContent = getCurrentStreak(safeTasks);
+    }
 }
 
 /**
@@ -476,7 +484,7 @@ function createTaskElement(task) {
     actionsDiv.appendChild(editButton);
 
     const toggleButton = document.createElement("button");
-    toggleButton.dataset.action = "toggle-complete";
+    toggleButton.dataset.action = "toggle";
     toggleButton.className = `task-card-button ${task.erledigt ? "bg-green-500" : "border-2 border-current"} text-white font-bold text-lg relative overflow-hidden`;
     toggleButton.setAttribute("aria-label", task.erledigt ? "Erledigt" : "Als erledigt markieren");
     toggleButton.textContent = task.erledigt ? "✓" : "";
@@ -541,21 +549,28 @@ export function renderTaskModal(state, taskId = null) {
     const nameInput = document.getElementById("task-name");
     const durationInput = document.getElementById("task-duration");
     const taskDateSelect = document.getElementById("task-date");
+    const errorEl = document.getElementById("task-name-error");
+
+    if (errorEl) errorEl.textContent = "";
+    if (nameInput) nameInput.removeAttribute("aria-invalid");
+    if (durationInput) durationInput.value = "";
 
     const taskToEdit = taskId && Array.isArray(tasks) ? tasks.find(t => t && t.id === taskId) : null;
 
     if (taskToEdit) {
         if (title) title.textContent = "Aufgabe bearbeiten";
         if (idInput) idInput.value = taskToEdit.id;
-        if (nameInput) nameInput.value = taskToEdit.name;
+        if (nameInput) nameInput.value = taskToEdit.name ?? "";
 
         if (taskToEdit.kategorie) {
             const radio = document.querySelector(`input[name="kategorie"][value="${taskToEdit.kategorie}"]`);
             if (radio) radio.checked = true;
         }
 
-        if (taskToEdit.kategorie === "pc" && durationInput) {
-            durationInput.value = taskToEdit.durationInMinutes;
+        if (durationInput) {
+            durationInput.value = taskToEdit.kategorie === "pc"
+                ? String(taskToEdit.durationInMinutes ?? "")
+                : "";
         }
     } else {
         if (title) title.textContent = "Neue Aufgabe erstellen";

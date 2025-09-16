@@ -693,6 +693,13 @@ body {
     transition: all 0.2s;
 }
 
+.form-error {
+    color: var(--danger);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    min-height: 1.25rem;
+}
+
 .btn-primary {
     background-color: var(--text-accent);
     color: white;
