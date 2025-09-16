@@ -358,7 +358,7 @@ function createEmptyState() {
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("stroke-width", "1.5");
     svg.setAttribute("stroke", "currentColor");
-    svg.className = "empty-tasks-icon";
+    svg.setAttribute("class", "empty-tasks-icon");
     svg.setAttribute("aria-hidden", "true");
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");

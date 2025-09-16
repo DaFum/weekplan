@@ -2,7 +2,15 @@
 import { initEventListeners } from "./events.js";
 import { loadData, saveData } from "./storage.js";
 import { cleanupOldTasks } from "./tasks.js";
-import { renderAllUI, updateMotivationsspruch, scrollToCurrentDay, updateTasksUI, updateTimeTracker, updateWeeklyGoalTracker, updateCoinsDisplay } from "./ui.js";
+import {
+    renderAllUI,
+    updateMotivationsspruch,
+    scrollToCurrentDay,
+    updateTasksUI,
+    updateTimeTracker,
+    updateWeeklyGoalTracker,
+    updateCoinsDisplay
+} from "./ui.js";
 import { initGames } from "./games.js";
 import { updateTheme, updateMetaBar } from "./theme.js";
 import { updateState, subscribe } from "./state.js";
@@ -10,43 +18,49 @@ import { initSounds } from "./audio.js";
 import { debounce } from "./utils.js";
 
 /**
- * Main entry point of the application.
- * This function is executed when the DOM is fully loaded.
+ * Loads persisted data and normalises the initial application state.
+ * @returns {string} The theme that should be applied immediately.
  */
-document.addEventListener("DOMContentLoaded", () => {
-    // Load saved data from storage
+function hydrateState() {
     const savedData = loadData();
-    // Determine the theme based on saved data or system preference
-    const theme = savedData.theme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = savedData.theme || (prefersDark ? "dark" : "light");
 
-    // Update the application state with loaded data and theme
     updateState({
         ...savedData,
         theme,
         aktiveWoche: 0
     });
 
-    // Apply the determined theme immediately
+    return theme;
+}
+
+/**
+ * Renders the initial UI and prepares components that require the DOM.
+ * @param {string} theme - Theme that should be applied before rendering.
+ */
+function initializeUI(theme) {
     updateTheme(theme);
-
-    // Initialize Audio früh, Listener nach dem ersten Render (Form-Handler brauchen DOM)
     initSounds();
-
-    // Perform the initial render of the UI
     renderAllUI();
     updateMotivationsspruch();
     scrollToCurrentDay();
+}
 
-    // Jetzt, da DOM steht, Events binden
+/**
+ * Wires up global event handlers and interactive components.
+ */
+function initializeInteractions() {
     initEventListeners();
-
-    // Initialize games
     initGames();
+}
 
-    // Create a debounced version of the saveData function for performance
+/**
+ * Registers state subscriptions for UI updates and persistence.
+ */
+function registerStateSubscriptions() {
     const debouncedSaveData = debounce(saveData, 300);
 
-    // Subscribe to state changes for persistence and specific UI updates
     subscribe("theme", state => {
         updateTheme(state.theme);
         saveData(state);
@@ -73,12 +87,31 @@ document.addEventListener("DOMContentLoaded", () => {
         updateCoinsDisplay(state);
         saveData(state);
     });
+}
 
-    // Clean up old tasks after subscriptions are registered to ensure persistence
-    cleanupOldTasks();
-
-    // Request notification permission if not already asked
+/**
+ * Requests notification permission once per installation if supported.
+ */
+function requestNotificationPermission() {
     if (!localStorage.getItem("notifsAsked") && "Notification" in window) {
-        Notification.requestPermission().then(() => localStorage.setItem("notifsAsked", 1));
+        Notification.requestPermission().then(() => localStorage.setItem("notifsAsked", "1"));
     }
-});
+}
+
+/**
+ * Bootstraps the entire application.
+ */
+function bootstrapApp() {
+    const theme = hydrateState();
+    initializeUI(theme);
+    initializeInteractions();
+    registerStateSubscriptions();
+    cleanupOldTasks();
+    requestNotificationPermission();
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootstrapApp, { once: true });
+} else {
+    bootstrapApp();
+}
