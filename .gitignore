@@ -3,3 +3,10 @@
 
 # GitHub App credentials
 gha-creds-*.json
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Node dependencies
+node_modules/

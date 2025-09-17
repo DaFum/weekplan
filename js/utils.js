@@ -28,6 +28,43 @@ export const getStartOfWeek = (date) => {
 };
 
 /**
+ * Parses a date string in the format YYYY-MM-DD using the local timezone.
+ *
+ * Unlike the Date constructor, which treats bare ISO strings as UTC, this helper
+ * constructs the date with numeric year/month/day components to keep the local
+ * calendar day intact. Invalid inputs yield null so callers can guard against
+ * malformed values.
+ *
+ * @param {string} value - The ISO-like date string to parse.
+ * @returns {Date|null} A Date object on success, otherwise null.
+ */
+export function parseLocalISODate(value) {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const day = Number(match[3]);
+
+    const date = new Date(year, monthIndex, day);
+    if (Number.isNaN(date.valueOf())) {
+        return null;
+    }
+
+    if (date.getFullYear() !== year || date.getMonth() !== monthIndex || date.getDate() !== day) {
+        return null;
+    }
+
+    return date;
+}
+
+/**
  * Formats a date for display purposes.
  * @param {Date} date - The date to format.
  * @returns {string} The formatted date string (e.g., "Montag, 01.01").
