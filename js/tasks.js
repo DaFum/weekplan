@@ -209,7 +209,7 @@ function getTaskFormElements() {
     return {
         idInput: idInput instanceof HTMLInputElement ? idInput : null,
         nameInput: nameInput instanceof HTMLInputElement ? nameInput : null,
-        dateInput: dateInput instanceof HTMLSelectElement ? dateInput : null,
+        dateInput: dateInput instanceof HTMLInputElement ? dateInput : null,
         durationInput: durationInput instanceof HTMLInputElement ? durationInput : null,
         errorEl: errorEl instanceof HTMLElement ? errorEl : null
     };
