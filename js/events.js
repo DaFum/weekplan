@@ -136,6 +136,7 @@ function handlePromptSubmit(event) {
     }
 
     const raw = inputEl.value.trim();
+    // Explicitly convert empty input to NaN; 0 is a valid value and should not be treated as NaN.
     const value = raw === "" ? NaN : Number(raw);
 
     if (typeof promptCallback === "function" && Number.isFinite(value) && value >= 0) {
