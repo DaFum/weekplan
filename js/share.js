@@ -57,8 +57,8 @@ export function getPrintableTitle() {
     const state = getState();
     const tasks = Array.isArray(state.tasks) ? state.tasks : [];
     const upcomingTask = tasks
-        .filter(task => !task.erledigt)
-        .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))[0];
+        .filter(task => !task.erledigt && task.date)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
     if (!upcomingTask) {
         return "Wochen-Power";
