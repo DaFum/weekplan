@@ -2,16 +2,51 @@
 import { getStartOfWeek, getISODate } from "./utils.js";
 import { getState, updateState } from "./state.js";
 
+export const THEME_OPTIONS = [
+    { id: "sky", label: "Sky", icon: "🌤️" },
+    { id: "dark", label: "Dark Mode", icon: "🌙" },
+    { id: "pastel", label: "Pastell", icon: "🧁" },
+    { id: "neon", label: "Neon", icon: "🎉" },
+    { id: "forest", label: "Forest", icon: "🌲" }
+];
+
+const FALLBACK_THEME = "sky";
+
+function normalizeTheme(theme) {
+    if (theme === "light") return "sky"; // backwards compatibility for persisted data
+    const availableIds = new Set(THEME_OPTIONS.map(option => option.id));
+    return availableIds.has(theme) ? theme : FALLBACK_THEME;
+}
+
+function getThemeDetails(theme) {
+    const normalized = normalizeTheme(theme);
+    return THEME_OPTIONS.find(option => option.id === normalized) ?? THEME_OPTIONS[0];
+}
+
+function getNextThemeId(currentTheme) {
+    const normalized = normalizeTheme(currentTheme);
+    const index = THEME_OPTIONS.findIndex(option => option.id === normalized);
+    if (index === -1) return FALLBACK_THEME;
+    const nextIndex = (index + 1) % THEME_OPTIONS.length;
+    return THEME_OPTIONS[nextIndex].id;
+}
+
 /**
- * Toggles the app theme between 'dark' and 'light'.
- *
- * Reads the current theme from the global state and sets the opposite theme
- * using updateState({ theme: newTheme }).
+ * Cycles through the available themes in a fixed order.
  */
 export function toggleTheme() {
     const state = getState();
-    const newTheme = state.theme === "dark" ? "light" : "dark";
+    const newTheme = getNextThemeId(state.theme);
     updateState({ theme: newTheme });
+}
+
+/**
+ * Sets the theme to the given id if it exists, otherwise falls back to the default theme.
+ * @param {string} themeId
+ */
+export function selectTheme(themeId) {
+    const normalized = normalizeTheme(themeId);
+    updateState({ theme: normalized });
 }
 
 /**
@@ -21,27 +56,67 @@ export function toggleTheme() {
  * @param {string} theme - Expects 'dark' to activate dark mode; any other value switches to light mode.
  */
 export function updateTheme(theme) {
-    const isDark = theme === "dark";
-    document.body.classList.toggle("dark", isDark);
-    const toggle = document.getElementById("theme-toggle");
-    if (toggle) {
-        toggle.setAttribute("aria-pressed", isDark ? "true" : "false");
-    }
-    updateThemeIcons(theme);
+    const normalized = normalizeTheme(theme);
+    const body = document.body;
+
+    // Remove existing theme classes before applying the new one
+    Array.from(body.classList).forEach(cls => {
+        if (cls.startsWith("theme-")) {
+            body.classList.remove(cls);
+        }
+    });
+
+    body.classList.add(`theme-${normalized}`);
+    body.classList.toggle("dark", normalized === "dark");
+
+    updateThemeButton(normalized);
+    updateThemeMenu(normalized);
 }
 
 /**
- * Updates the theme icon in the DOM according to the given theme.
- *
- * Sets the text icon of the element with the ID "theme-icon" to "🌙" for 'dark',
- * otherwise to "🌞".
- *
- * @param {string} theme - Expects the theme name, e.g., 'dark' or 'light'.
+ * Updates the theme icon and accessible name in the header button.
+ * @param {string} theme
  */
-function updateThemeIcons(theme) {
-    const isDark = theme === "dark";
-    const el = document.getElementById("theme-icon");
-    if (el) el.textContent = isDark ? "🌙" : "🌞";
+function updateThemeButton(theme) {
+    const details = getThemeDetails(theme);
+    const iconEl = document.getElementById("theme-icon");
+    if (iconEl) {
+        iconEl.textContent = details.icon;
+    }
+
+    const labelEl = document.getElementById("theme-name");
+    if (labelEl) {
+        labelEl.textContent = details.label;
+    }
+
+    const toggle = document.getElementById("theme-toggle");
+    if (toggle) {
+        toggle.setAttribute("aria-label", `Design ändern (${details.label})`);
+        toggle.setAttribute("aria-expanded", String(isThemeMenuOpen()));
+    }
+}
+
+/**
+ * Highlights the active theme within the theme menu when it is rendered.
+ * @param {string} theme
+ */
+function updateThemeMenu(theme) {
+    const normalized = normalizeTheme(theme);
+    document.querySelectorAll(".theme-option").forEach(button => {
+        const isActive = button instanceof HTMLButtonElement && button.dataset.theme === normalized;
+        if (isActive) {
+            button.classList.add("active");
+            button.setAttribute("aria-checked", "true");
+        } else {
+            button.classList.remove("active");
+            button.setAttribute("aria-checked", "false");
+        }
+    });
+}
+
+function isThemeMenuOpen() {
+    const menu = document.getElementById("theme-menu");
+    return menu ? !menu.classList.contains("hidden") : false;
 }
 
 /**

@@ -29,19 +29,57 @@
     <div class="container mx-auto max-w-4xl p-4 min-h-screen flex flex-col">
         <!-- Header section -->
         <header class="header-container">
-            <h1 class="header-title font-black">Wochen-Power</h1>
-            <p id="motivations-spruch" class="motivation-text">Lade deine Woche mit Erfolg auf!</p>
-            <!-- Theme toggle button -->
-            <button id="theme-toggle" class="theme-toggle text-secondary hover:bg-accent transition-colors" aria-label="Farbschema wechseln">
-                <span id="theme-icon" class="text-2xl">🌞</span>
-            </button>
+            <div>
+                <h1 class="header-title font-black">Wochen-Power</h1>
+                <p id="motivations-spruch" class="motivation-text">Lade deine Woche mit Erfolg auf!</p>
+            </div>
+            <div class="header-actions" role="group" aria-label="Schnellaktionen">
+                <button id="export-plan" type="button" class="header-action-btn" aria-label="Wochenplan als Datei exportieren">
+                    <span aria-hidden="true">💾</span>
+                </button>
+                <button id="print-plan" type="button" class="header-action-btn" aria-label="Wochenplan drucken">
+                    <span aria-hidden="true">🖨️</span>
+                </button>
+                <!-- Theme toggle button -->
+                <button id="theme-toggle" class="theme-toggle text-secondary hover:bg-accent transition-colors" aria-haspopup="true" aria-expanded="false" aria-label="Design ändern (Sky)">
+                    <span id="theme-icon" class="text-2xl">🌤️</span>
+                    <span id="theme-name" class="theme-toggle-label">Sky</span>
+                </button>
+            </div>
         </header>
+
+        <div id="theme-menu" class="theme-menu hidden" role="menu" aria-label="Design auswählen" tabindex="-1">
+            <p class="theme-menu-title">Dein Style</p>
+            <div class="theme-menu-grid">
+                <button type="button" class="theme-option" data-theme="sky" role="menuitemradio" aria-checked="false">
+                    <span class="theme-option-icon" aria-hidden="true">🌤️</span>
+                    <span>Sky</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="dark" role="menuitemradio" aria-checked="false">
+                    <span class="theme-option-icon" aria-hidden="true">🌙</span>
+                    <span>Dark Mode</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="pastel" role="menuitemradio" aria-checked="false">
+                    <span class="theme-option-icon" aria-hidden="true">🧁</span>
+                    <span>Pastell</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="neon" role="menuitemradio" aria-checked="false">
+                    <span class="theme-option-icon" aria-hidden="true">🎉</span>
+                    <span>Neon</span>
+                </button>
+                <button type="button" class="theme-option" data-theme="forest" role="menuitemradio" aria-checked="false">
+                    <span class="theme-option-icon" aria-hidden="true">🌲</span>
+                    <span>Forest</span>
+                </button>
+            </div>
+        </div>
 
         <!-- Section for task statistics -->
         <section class="task-grid mb-6">
             <div id="pc-time-tracker" class="stats-card"></div>
             <div id="weekly-goal-tracker" class="stats-card"></div>
             <div id="streak-tracker" class="stats-card"></div>
+            <div id="achievements-tracker" class="stats-card"></div>
         </section>
 
         <!-- Section for mini-games -->
