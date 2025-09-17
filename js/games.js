@@ -2,6 +2,7 @@
 import { getState, updateState } from "./state.js";
 import { shuffleArray } from "./utils.js";
 import { quizQuestions } from "./config.js";
+import { hideModalElement, showModalElement } from "./modal.js";
 
 // --- Coin Management ---
 
@@ -46,12 +47,11 @@ export function initGames() {
  */
 export function openGame(gameName) {
     updateState({ currentGame: gameName });
-    document.body.classList.add("modal-open");
     if (gameName === "memory") {
-        document.getElementById("memory-game-modal")?.classList.remove("hidden");
+        showModalElement("memory-game-modal");
         initMemoryGame();
     } else if (gameName === "quiz") {
-        document.getElementById("quiz-game-modal")?.classList.remove("hidden");
+        showModalElement("quiz-game-modal");
         initQuizGame();
     }
 }
@@ -66,14 +66,8 @@ export function closeGame() {
   }
 
   const modalId = currentGame === "memory" ? "memory-game-modal" : "quiz-game-modal";
-  document.getElementById(modalId)?.classList.add("hidden");
+  hideModalElement(modalId);
   updateState({ currentGame: null });
-  const taskEl = document.getElementById("task-modal");
-  const promptEl = document.getElementById("prompt-modal");
-  const stillOpen =
-      (!!taskEl && !taskEl.classList.contains("hidden")) ||
-      (!!promptEl && !promptEl.classList.contains("hidden"));
-  if (!stillOpen) document.body.classList.remove("modal-open");
 }
 
 // --- Memory Game Logic ---
