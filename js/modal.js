@@ -1,13 +1,11 @@
 import { updateState } from "./state.js";
 
-const MODAL_IDS = ["task-modal", "prompt-modal", "memory-game-modal", "quiz-game-modal"];
-
 export function showModalElement(id) {
     const element = document.getElementById(id);
     if (!element) return;
 
     element.classList.remove("hidden");
-    document.body.classList.add("modal-open");
+    updateBodyModalState();
 }
 
 export function hideModalElement(id) {
@@ -22,7 +20,7 @@ export function closeModal() {
     hideModalElement("task-modal");
 }
 
-export function openPromptModal(title, label, initialValue, callback) {
+export function openPromptModal(title, label, initialValue, callback, options = {}) {
     updateState({ promptCallback: callback });
 
     const titleEl = document.getElementById("prompt-modal-title");
@@ -33,8 +31,15 @@ export function openPromptModal(title, label, initialValue, callback) {
     const input = document.getElementById("prompt-modal-input");
     if (input instanceof HTMLInputElement) {
         input.value = initialValue ?? "";
-        input.step = label.toLowerCase().includes("stunden") ? "0.5" : "1";
+        if (options.step != null) {
+            input.step = String(options.step);
+        } else {
+            input.step = "1";
+        }
         input.min = "0";
+        if (!input.hasAttribute("aria-describedby")) {
+            input.setAttribute("aria-describedby", "prompt-modal-error");
+        }
         input.removeAttribute("aria-invalid");
         input.focus();
         input.select();
@@ -64,9 +69,8 @@ export function closePromptModal() {
 }
 
 function updateBodyModalState() {
-    const hasOpenModal = MODAL_IDS.some(modalId => {
-        const el = document.getElementById(modalId);
-        return el && !el.classList.contains("hidden");
-    });
+    const hasOpenModal = Array
+        .from(document.querySelectorAll('[role="dialog"]'))
+        .some(el => !el.classList.contains("hidden"));
     document.body.classList.toggle("modal-open", hasOpenModal);
 }

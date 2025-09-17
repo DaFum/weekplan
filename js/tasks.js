@@ -173,7 +173,8 @@ export function setPcTimeLimit() {
             if (Number.isFinite(n) && n >= 0) {
                 updateState({ pcStundenGesamt: n });
             }
-        }
+        },
+        { step: 0.5 }
     );
 }
 
@@ -195,7 +196,8 @@ export function setWeeklyGoal() {
             if (Number.isFinite(n) && n >= 0) {
                 updateState({ wochenZiel: n });
             }
-        }
+        },
+        { step: 1 }
     );
 }
 
@@ -276,10 +278,13 @@ function notifyAboutNewTask(task) {
             ? `Am ${formatDisplayDate(date)}`
             : undefined;
 
-        new Notification(`Neue Aufgabe: ${task.name}`, {
-            body: bodyText,
+        const options = {
             icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png"
-        });
+        };
+        if (bodyText) {
+            options.body = bodyText;
+        }
+        new Notification(`Neue Aufgabe: ${task.name}`, options);
     } catch (error) {
         console.warn("Benachrichtigung konnte nicht angezeigt werden.", error);
     }

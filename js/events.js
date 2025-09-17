@@ -212,7 +212,7 @@ function handlePromptSubmit(event) {
     }
 
     const message = Number.isFinite(value)
-        ? "Bitte geben Sie eine positive Zahl ein."
+        ? "Bitte geben Sie eine Zahl >= 0 ein."
         : "Bitte geben Sie eine gültige Zahl ein.";
 
     if (errorEl) {
