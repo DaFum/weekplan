@@ -24,15 +24,19 @@ import { debounce } from "./utils.js";
 function hydrateState() {
     const savedData = loadData();
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const theme = savedData.theme || (prefersDark ? "dark" : "light");
+    const knownThemes = new Set(["sky", "dark", "pastel", "neon", "forest", "light"]);
+    let theme = knownThemes.has(savedData.theme) ? savedData.theme : null;
+    if (!theme) {
+        theme = prefersDark ? "dark" : "sky";
+    }
 
     updateState({
         ...savedData,
-        theme,
+        theme: theme === "light" ? "sky" : theme,
         aktiveWoche: 0
     });
 
-    return theme;
+    return theme === "light" ? "sky" : theme;
 }
 
 /**

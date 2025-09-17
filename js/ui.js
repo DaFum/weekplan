@@ -1,7 +1,7 @@
 // Import necessary functions, data, and libraries
 import { getState, updateState } from "./state.js";
 import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes, addDays } from "./utils.js";
-import { categoryLabels, kategorieDetails, motivationsSprueche } from "./config.js";
+import { categoryLabels, kategorieDetails, motivationsSprueche, achievementsConfig } from "./config.js";
 import { updateMetaBar } from "./theme.js";
 import { getPunkteFuerTag, getCurrentStreak } from "./tasks.js";
 
@@ -41,6 +41,7 @@ export function renderAllUI() {
     renderTimeTrackerStructure();
     renderWeeklyGoalTrackerStructure();
     renderStreakTrackerStructure();
+    renderAchievementsTrackerStructure();
     renderPlan(state);
     updateAllTrackers(state);
     updateCoinsDisplay(state);
@@ -65,6 +66,7 @@ function updateAllTrackers(state) {
     updateTimeTracker(state);
     updateWeeklyGoalTracker(state);
     updateStreakTracker(state);
+    updateAchievementsTracker(state);
     updatePunkteAnzeige(state);
     updateMetaBar(state);
 }
@@ -190,6 +192,59 @@ export function updateStreakTracker(state) {
     if (streakValueEl) {
         const safeTasks = Array.isArray(state.tasks) ? state.tasks : [];
         streakValueEl.textContent = getCurrentStreak(safeTasks);
+    }
+}
+
+function renderAchievementsTrackerStructure() {
+    const container = document.getElementById("achievements-tracker");
+    if (!container) return;
+    container.innerHTML = `
+        <h2 class="text-lg font-bold">🏅 Erfolge</h2>
+        <div id="achievement-progress" class="achievement-progress"></div>
+        <div class="achievement-list" id="achievement-list"></div>`;
+}
+
+function updateAchievementsTracker(state) {
+    const listEl = document.getElementById("achievement-list");
+    const progressEl = document.getElementById("achievement-progress");
+    if (!listEl || !progressEl) return;
+
+    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+    const completedTasks = tasks.filter(task => task?.erledigt).length;
+    const pcCompleted = tasks.filter(task => task?.erledigt && task?.kategorie === "pc").length;
+    const streak = getCurrentStreak(tasks);
+
+    const progressItems = [];
+    listEl.innerHTML = "";
+
+    achievementsConfig.forEach(achievement => {
+        const achieved = isAchievementUnlocked(achievement, { completedTasks, pcCompleted, streak });
+        if (achieved) {
+            progressItems.push(achievement);
+        }
+
+        const badge = document.createElement("div");
+        badge.className = `achievement-badge${achieved ? " completed" : ""}`;
+        badge.setAttribute("role", "status");
+        badge.setAttribute("aria-label", `${achievement.label}: ${achieved ? "freigeschaltet" : "noch offen"}`);
+        badge.innerHTML = `<span aria-hidden="true">${achievement.emoji}</span><span>${achievement.label}</span>`;
+        listEl.appendChild(badge);
+    });
+
+    const unlockedCount = progressItems.length;
+    progressEl.textContent = `${unlockedCount} von ${achievementsConfig.length} Erfolgen freigeschaltet`;
+}
+
+function isAchievementUnlocked(achievement, stats) {
+    switch (achievement.type) {
+        case "completedTasks":
+            return stats.completedTasks >= achievement.threshold;
+        case "streak":
+            return stats.streak >= achievement.threshold;
+        case "pcCompleted":
+            return stats.pcCompleted >= achievement.threshold;
+        default:
+            return false;
     }
 }
 

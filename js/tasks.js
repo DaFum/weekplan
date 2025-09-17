@@ -5,6 +5,9 @@ import { starteKonfetti } from "./effects.js";
 import { closeModal, openPromptModal } from "./events.js";
 import { formatDisplayDate, getISODate, getStartOfWeek } from "./utils.js";
 
+const TASK_NAME_MAX_LENGTH = 100;
+const TASK_NAME_ERROR_MESSAGE = "Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.";
+
 /**
  * Gets the number of completed tasks for a specific day.
  * @param {string} isoDate - The ISO date string for the day.
@@ -59,58 +62,33 @@ export function getCurrentStreak(tasks) {
  */
 export function saveTask(event) {
     event.preventDefault();
-    const taskId = document.getElementById("task-id").value;
-    const katEl = document.querySelector('input[name="kategorie"]:checked');
-    const kategorie = katEl?.value;
-    const nameEl = document.getElementById("task-name");
-    const dateEl = document.getElementById("task-date");
-    if (!kategorie || !nameEl?.value || !dateEl?.value) return;
 
-    // Validate and sanitize task name
-    const taskName = nameEl.value.trim();
-    if (taskName.length === 0 || taskName.length > 100) {
-        const errorEl = document.getElementById("task-name-error");
-        if (errorEl) {
-            errorEl.textContent = "Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.";
-        }
-        nameEl?.setAttribute("aria-invalid", "true");
-        return;
-    } else {
-        const errorEl = document.getElementById("task-name-error");
-        if (errorEl) {
-            errorEl.textContent = "";
-        }
-        nameEl?.removeAttribute("aria-invalid");
-    }
+    const { idInput, nameInput, dateInput, durationInput, errorEl } = getTaskFormElements();
+    if (!nameInput || !dateInput) return;
+
+    const kategorie = getSelectedCategory();
+    if (!kategorie) return;
+
+    const sanitizedName = validateTaskName(nameInput, errorEl);
+    if (!sanitizedName) return;
+
+    const dateValue = dateInput.value;
+    if (!dateValue) return;
 
     const taskData = {
-        name: taskName,
-        kategorie: kategorie,
-        date: dateEl.value,
-        durationInMinutes: kategorie === "pc" ? parseInt(document.getElementById("task-duration").value) || 0 : 0
+        name: sanitizedName,
+        kategorie,
+        date: dateValue,
+        durationInMinutes: parseDurationValue(kategorie, durationInput)
     };
 
-    const { tasks } = getState();
+    const taskId = idInput?.value?.trim();
     if (taskId) {
-        const taskIndex = tasks.findIndex(t => t.id === taskId);
-        if (taskIndex > -1) {
-            const newTasks = [...tasks];
-            newTasks[taskIndex] = { ...tasks[taskIndex], ...taskData };
-            updateState({ tasks: newTasks });
-        } else {
-            console.warn(`saveTask: taskId "${taskId}" nicht gefunden.`);
-        }
+        updateExistingTask(taskId, taskData);
     } else {
-        const newId = "task-" + Date.now();
-        updateState({ tasks: [...tasks, { ...taskData, id: newId, erledigt: false }] });
-
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            new Notification(`Neue Aufgabe: ${taskData.name}`, {
-                body: `Am ${formatDisplayDate(new Date(taskData.date))}`,
-                icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png"
-            });
-        }
+        createTask(taskData);
     }
+
     closeModal();
 }
 
@@ -219,4 +197,90 @@ export function setWeeklyGoal() {
             }
         }
     );
+}
+
+function getTaskFormElements() {
+    const idInput = document.getElementById("task-id");
+    const nameInput = document.getElementById("task-name");
+    const dateInput = document.getElementById("task-date");
+    const durationInput = document.getElementById("task-duration");
+    const errorEl = document.getElementById("task-name-error");
+
+    return {
+        idInput: idInput instanceof HTMLInputElement ? idInput : null,
+        nameInput: nameInput instanceof HTMLInputElement ? nameInput : null,
+        dateInput: dateInput instanceof HTMLInputElement ? dateInput : null,
+        durationInput: durationInput instanceof HTMLInputElement ? durationInput : null,
+        errorEl: errorEl instanceof HTMLElement ? errorEl : null
+    };
+}
+
+function getSelectedCategory() {
+    const selected = document.querySelector('input[name="kategorie"]:checked');
+    return selected instanceof HTMLInputElement ? selected.value : null;
+}
+
+function validateTaskName(nameInput, errorEl) {
+    const value = nameInput.value.trim();
+    const isValid = value.length > 0 && value.length <= TASK_NAME_MAX_LENGTH;
+
+    if (!isValid) {
+        if (errorEl) errorEl.textContent = TASK_NAME_ERROR_MESSAGE;
+        nameInput.setAttribute("aria-invalid", "true");
+        return null;
+    }
+
+    if (errorEl) errorEl.textContent = "";
+    nameInput.removeAttribute("aria-invalid");
+    return value;
+}
+
+function parseDurationValue(kategorie, durationInput) {
+    if (kategorie !== "pc" || !(durationInput instanceof HTMLInputElement)) {
+        return 0;
+    }
+
+    const parsed = Number.parseInt(durationInput.value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function updateExistingTask(taskId, taskData) {
+    const { tasks } = getState();
+    const taskIndex = tasks.findIndex(task => task?.id === taskId);
+
+    if (taskIndex === -1) {
+        console.warn(`saveTask: taskId "${taskId}" nicht gefunden.`);
+        return;
+    }
+
+    const newTasks = [...tasks];
+    newTasks[taskIndex] = { ...tasks[taskIndex], ...taskData };
+    updateState({ tasks: newTasks });
+}
+
+function createTask(taskData) {
+    const { tasks } = getState();
+    const newTask = { ...taskData, id: `task-${Date.now()}`, erledigt: false };
+    updateState({ tasks: [...tasks, newTask] });
+    notifyAboutNewTask(newTask);
+}
+
+function notifyAboutNewTask(task) {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") {
+        return;
+    }
+
+    try {
+        const date = task.date ? new Date(task.date) : null;
+        const bodyText = date && !Number.isNaN(date.valueOf())
+            ? `Am ${formatDisplayDate(date)}`
+            : undefined;
+
+        new Notification(`Neue Aufgabe: ${task.name}`, {
+            body: bodyText,
+            icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png"
+        });
+    } catch (error) {
+        console.warn("Benachrichtigung konnte nicht angezeigt werden.", error);
+    }
 }

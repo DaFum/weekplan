@@ -8,7 +8,7 @@ let state = {
     promptCallback: null, // Callback for the prompt modal
     coins: 0, // Number of coins
     currentGame: null, // The currently active game
-    theme: "light", // The current theme
+    theme: "sky", // The current theme
     audioInitialized: false,
 
     // Game state

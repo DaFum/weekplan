@@ -80,7 +80,7 @@ export function loadData() {
     data.pcStundenGesamt = typeof data.pcStundenGesamt === 'number' ? data.pcStundenGesamt : 0;
     data.wochenZiel = typeof data.wochenZiel === 'number' ? data.wochenZiel : 10;
     data.coins = typeof data.coins === 'number' ? data.coins : 0;
-    data.theme = typeof data.theme === 'string' ? data.theme : 'light';
+    data.theme = typeof data.theme === 'string' ? data.theme : 'sky';
     
     return data;
 }

@@ -28,6 +28,49 @@ export const categoryLabels = {
     sonstiges: 'Freizeit'
 };
 
+export const achievementsConfig = [
+    {
+        id: "first-task",
+        label: "Erste Aufgabe",
+        description: "Erledige deine erste Aufgabe",
+        threshold: 1,
+        type: "completedTasks",
+        emoji: "🎉"
+    },
+    {
+        id: "five-tasks",
+        label: "5 erledigt",
+        description: "Schließe fünf Aufgaben ab",
+        threshold: 5,
+        type: "completedTasks",
+        emoji: "💪"
+    },
+    {
+        id: "streak-3",
+        label: "3er Streak",
+        description: "Bleib drei Tage in Folge dran",
+        threshold: 3,
+        type: "streak",
+        emoji: "🔥"
+    },
+    {
+        id: "streak-7",
+        label: "Wochenheld",
+        description: "Schaffe einen 7-Tage-Streak",
+        threshold: 7,
+        type: "streak",
+        emoji: "🏆"
+    },
+    {
+        id: "pc-master",
+        label: "PC-Profi",
+        description: "Schließe drei PC-Aufgaben ab",
+        threshold: 3,
+        type: "pcCompleted",
+        emoji: "💻"
+    }
+];
+
 // Array of quiz questions for the quiz game
 export const quizQuestions = [
     { question: "Wie viele Planeten hat unser Sonnensystem?", options: ["7", "8", "9", "10"], answer: 1 },
