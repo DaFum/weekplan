@@ -6,14 +6,26 @@ import { setPcTimeLimit, setWeeklyGoal, toggleTask, deleteTask, saveTask } from 
 import { getState, updateState } from "./state.js";
 import { openGame, closeGame, checkQuizAnswer } from "./games.js";
 import { exportWeekPlan, printWeekPlan } from "./share.js";
+import { closeModal, closePromptModal, showModalElement } from "./modal.js";
 
 const BODY_ACTIVATION_EVENTS = ["pointerdown", "click"];
-const MODAL_IDS = ["task-modal", "prompt-modal", "memory-game-modal", "quiz-game-modal"];
+
+let listenersInitialized = false;
+let audioActivationHandler = null;
+let audioActivationCompleted = false;
+let delegatedClicksInitialized = false;
+let formSubmissionsInitialized = false;
+let keyboardShortcutsInitialized = false;
 
 /**
  * Initializes central event handlers for the user interface.
  */
 export function initEventListeners() {
+    if (listenersInitialized) {
+        return;
+    }
+
+    listenersInitialized = true;
     setupAudioInitialization();
     setupDelegatedClicks();
     setupFormSubmissions();
@@ -24,9 +36,13 @@ export function initEventListeners() {
  * Ensures the AudioContext is activated on the first user gesture.
  */
 function setupAudioInitialization() {
-    const startAudio = createAudioActivationHandler();
+    if (audioActivationCompleted || audioActivationHandler) {
+        return;
+    }
+
+    audioActivationHandler = createAudioActivationHandler();
     BODY_ACTIVATION_EVENTS.forEach(eventName => {
-        document.body.addEventListener(eventName, startAudio, { once: true });
+        document.body.addEventListener(eventName, audioActivationHandler);
     });
 }
 
@@ -36,14 +52,24 @@ function setupAudioInitialization() {
  */
 function createAudioActivationHandler() {
     let activated = false;
+    let starting = false;
 
     const handler = async () => {
-        if (activated) return;
+        if (activated || starting) return;
+        starting = true;
+        const success = await activateAudioContext();
+        starting = false;
+
+        if (!success) {
+            return;
+        }
+
         activated = true;
+        audioActivationCompleted = true;
         BODY_ACTIVATION_EVENTS.forEach(eventName => {
             document.body.removeEventListener(eventName, handler);
         });
-        await activateAudioContext();
+        audioActivationHandler = null;
     };
 
     return handler;
@@ -55,17 +81,25 @@ function createAudioActivationHandler() {
 async function activateAudioContext() {
     const tone = window.Tone;
     const contextState = tone?.context?.state;
-    if (!tone || !tone.context || contextState === "running") {
-        return;
+    if (!tone || !tone.context) {
+        updateState({ audioInitialized: false });
+        return false;
+    }
+
+    if (contextState === "running") {
+        updateState({ audioInitialized: true });
+        return true;
     }
 
     try {
         await tone.start();
         updateState({ audioInitialized: true });
         console.log("AudioContext started successfully.");
+        return true;
     } catch (error) {
         console.error("Could not start AudioContext:", error);
         updateState({ audioInitialized: false });
+        return false;
     }
 }
 
@@ -73,10 +107,20 @@ async function activateAudioContext() {
  * Sets up the global click delegation handler.
  */
 function setupDelegatedClicks() {
+    if (delegatedClicksInitialized) {
+        return;
+    }
+
+    delegatedClicksInitialized = true;
     document.body.addEventListener("click", handleBodyClick);
 }
 
 function setupKeyboardShortcuts() {
+    if (keyboardShortcutsInitialized) {
+        return;
+    }
+
+    keyboardShortcutsInitialized = true;
     document.addEventListener("keydown", handleGlobalKeydown);
 }
 
@@ -109,6 +153,11 @@ function handleGlobalKeydown(event) {
  * Registers submit handlers for forms managed by the application.
  */
 function setupFormSubmissions() {
+    if (formSubmissionsInitialized) {
+        return;
+    }
+
+    formSubmissionsInitialized = true;
     const taskForm = document.getElementById("task-form");
     if (taskForm instanceof HTMLFormElement) {
         taskForm.addEventListener("submit", saveTask);
@@ -129,24 +178,48 @@ function handlePromptSubmit(event) {
 
     const { promptCallback } = getState();
     const inputEl = document.getElementById("prompt-modal-input");
+    const errorEl = document.getElementById("prompt-modal-error");
+
+    const resetPromptError = () => {
+        if (errorEl) {
+            errorEl.textContent = "";
+        }
+        if (inputEl instanceof HTMLInputElement) {
+            inputEl.removeAttribute("aria-invalid");
+        }
+    };
 
     if (!(inputEl instanceof HTMLInputElement)) {
         closePromptModal();
         return;
     }
 
+    resetPromptError();
+
     const raw = inputEl.value.trim();
     // Explicitly convert empty input to NaN; 0 is a valid value and should not be treated as NaN.
     const value = raw === "" ? NaN : Number(raw);
 
-    if (typeof promptCallback === "function" && Number.isFinite(value) && value >= 0) {
+    if (typeof promptCallback !== "function") {
+        closePromptModal();
+        return;
+    }
+
+    if (Number.isFinite(value) && value >= 0) {
         promptCallback(value);
         closePromptModal();
-    } else if (Number.isFinite(value) && value < 0) {
-        alert("Bitte geben Sie eine positive Zahl ein.");
-    } else {
-        closePromptModal();
+        return;
     }
+
+    const message = Number.isFinite(value)
+        ? "Bitte geben Sie eine positive Zahl ein."
+        : "Bitte geben Sie eine gültige Zahl ein.";
+
+    if (errorEl) {
+        errorEl.textContent = message;
+    }
+    inputEl.setAttribute("aria-invalid", "true");
+    inputEl.focus();
 }
 
 function handleModalButtons(target) {
@@ -265,68 +338,6 @@ function openModal(taskId = null) {
     renderTaskModal(getState(), taskId);
     showModalElement("task-modal");
     document.getElementById("task-name")?.focus();
-}
-
-/**
- * Closes the task modal.
- */
-export function closeModal() {
-    hideModalElement("task-modal");
-}
-
-/**
- * Opens a numeric prompt modal.
- * @param {string} title - The title of the modal.
- * @param {string} label - The label for the input field.
- * @param {number} initialValue - The initial value for the input field.
- * @param {function} callback - The function to call when the form is submitted.
- */
-export function openPromptModal(title, label, initialValue, callback) {
-    updateState({ promptCallback: callback });
-    const titleEl = document.getElementById("prompt-modal-title");
-    const labelEl = document.getElementById("prompt-modal-label");
-    if (titleEl) titleEl.textContent = title;
-    if (labelEl) labelEl.textContent = label;
-    const input = document.getElementById("prompt-modal-input");
-    if (input) {
-        input.value = initialValue ?? "";
-        input.step = label.toLowerCase().includes("stunden") ? "0.5" : "1";
-        input.min = "0";
-        input.focus();
-        input.select();
-    }
-    showModalElement("prompt-modal");
-}
-
-/**
- * Closes the prompt modal.
- */
-function closePromptModal() {
-    hideModalElement("prompt-modal");
-    // Callback zurücksetzen, um veraltete Referenzen zu vermeiden
-    updateState({ promptCallback: null });
-}
-
-function showModalElement(id) {
-    const element = document.getElementById(id);
-    if (!element) return;
-    element.classList.remove("hidden");
-    document.body.classList.add("modal-open");
-}
-
-function hideModalElement(id) {
-    const element = document.getElementById(id);
-    if (!element) return;
-    element.classList.add("hidden");
-    updateBodyModalState();
-}
-
-function updateBodyModalState() {
-    const hasOpenModal = MODAL_IDS.some(modalId => {
-        const el = document.getElementById(modalId);
-        return el && !el.classList.contains("hidden");
-    });
-    document.body.classList.toggle("modal-open", hasOpenModal);
 }
 
 function toggleThemeMenu() {

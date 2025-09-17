@@ -2,7 +2,7 @@
 import { getState, updateState } from "./state.js";
 import { addCoins } from "./games.js";
 import { starteKonfetti } from "./effects.js";
-import { closeModal, openPromptModal } from "./events.js";
+import { closeModal, openPromptModal } from "./modal.js";
 import { formatDisplayDate, getISODate, getStartOfWeek } from "./utils.js";
 
 const TASK_NAME_MAX_LENGTH = 100;
@@ -271,7 +271,7 @@ function notifyAboutNewTask(task) {
     }
 
     try {
-        const date = task.date ? new Date(task.date) : null;
+        const date = task.date ? parseLocalISODate(task.date) : null;
         const bodyText = date && !Number.isNaN(date.valueOf())
             ? `Am ${formatDisplayDate(date)}`
             : undefined;
@@ -283,4 +283,30 @@ function notifyAboutNewTask(task) {
     } catch (error) {
         console.warn("Benachrichtigung konnte nicht angezeigt werden.", error);
     }
+}
+
+function parseLocalISODate(value) {
+    if (typeof value !== "string") {
+        return null;
+    }
+
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const day = Number(match[3]);
+
+    const date = new Date(year, monthIndex, day);
+    if (Number.isNaN(date.valueOf())) {
+        return null;
+    }
+
+    if (date.getFullYear() !== year || date.getMonth() !== monthIndex || date.getDate() !== day) {
+        return null;
+    }
+
+    return date;
 }
