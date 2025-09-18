@@ -15,7 +15,15 @@ const TASK_NAME_ERROR_MESSAGE = "Aufgabenname muss zwischen 1 und 100 Zeichen la
  * @returns {number} The number of completed tasks for the given day.
  */
 export function getPunkteFuerTag(isoDate, tasks) {
-    return tasks.filter(t => t.date === isoDate && t.erledigt).length;
+    if (!isoDate) return 0;
+
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    return safeTasks.filter(task => (
+        task &&
+        typeof task === "object" &&
+        task.date === isoDate &&
+        Boolean(task.erledigt)
+    )).length;
 }
 
 /**
@@ -24,9 +32,13 @@ export function getPunkteFuerTag(isoDate, tasks) {
  * @returns {number} The current streak in days.
  */
 export function getCurrentStreak(tasks) {
-    if (!tasks || tasks.length === 0) return 0;
+    if (!Array.isArray(tasks) || tasks.length === 0) return 0;
 
-    const erledigteTage = new Set(tasks.filter(t => t.erledigt).map(t => t.date));
+    const erledigteTage = new Set(
+        tasks
+            .filter(task => task && typeof task === "object" && task.erledigt && typeof task.date === "string" && task.date)
+            .map(task => task.date)
+    );
     if (erledigteTage.size === 0) return 0;
 
     // Lokale Mitternacht verwenden, damit getISODate (lokal) konsistent ist
@@ -103,7 +115,12 @@ export function saveTask(event) {
  */
 export function toggleTask(taskId) {
     const { tasks, sounds } = getState();
-    const newTasks = tasks.map(task => {
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    const newTasks = safeTasks.map(task => {
+        if (!task || typeof task !== "object") {
+            return task;
+        }
+
         if (task.id === taskId) {
             const wasErledigt = task.erledigt;
             const newErledigt = !wasErledigt;
@@ -137,7 +154,8 @@ export function toggleTask(taskId) {
  */
 export function deleteTask(taskId) {
     const { tasks } = getState();
-    updateState({ tasks: tasks.filter(t => t.id !== taskId) });
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    updateState({ tasks: safeTasks.filter(task => task && task.id !== taskId) });
 }
 
 /**
@@ -149,10 +167,17 @@ export function deleteTask(taskId) {
  */
 export function cleanupOldTasks() {
     const { tasks } = getState();
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
     const start = getStartOfWeek(new Date());
     // Lokales YYYY-MM-DD ableiten (ohne UTC-Verschiebung)
     const startOfCurrentWeekISO = getISODate(start);
-    updateState({ tasks: tasks.filter(task => task && task.date && task.date >= startOfCurrentWeekISO) });
+    updateState({
+        tasks: safeTasks.filter(task => (
+            task &&
+            typeof task.date === "string" &&
+            task.date >= startOfCurrentWeekISO
+        ))
+    });
 }
 
 /**
@@ -248,22 +273,24 @@ function parseDurationValue(kategorie, durationInput) {
 
 function updateExistingTask(taskId, taskData) {
     const { tasks } = getState();
-    const taskIndex = tasks.findIndex(task => task?.id === taskId);
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    const taskIndex = safeTasks.findIndex(task => task && task.id === taskId);
 
     if (taskIndex === -1) {
         console.warn(`saveTask: taskId "${taskId}" nicht gefunden.`);
         return;
     }
 
-    const newTasks = [...tasks];
-    newTasks[taskIndex] = { ...tasks[taskIndex], ...taskData };
+    const newTasks = [...safeTasks];
+    newTasks[taskIndex] = { ...safeTasks[taskIndex], ...taskData };
     updateState({ tasks: newTasks });
 }
 
 function createTask(taskData) {
     const { tasks } = getState();
+    const safeTasks = Array.isArray(tasks) ? tasks.filter(task => task && typeof task === "object") : [];
     const newTask = { ...taskData, id: `task-${Date.now()}`, erledigt: false };
-    updateState({ tasks: [...tasks, newTask] });
+    updateState({ tasks: [...safeTasks, newTask] });
     notifyAboutNewTask(newTask);
 }
 
