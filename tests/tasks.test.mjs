@@ -1,16 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { JSDOM } from "jsdom";
 
-process.env.NODE_ENV = "test";
+import { createTestDOM } from "./setup.mjs";
 
-const dom = new JSDOM("<!DOCTYPE html><body><div id='konfetti-container'></div></body>", { url: "http://localhost" });
-
-globalThis.window = dom.window;
-globalThis.document = dom.window.document;
-globalThis.HTMLElement = dom.window.HTMLElement;
-globalThis.HTMLInputElement = dom.window.HTMLInputElement;
-globalThis.Node = dom.window.Node;
+createTestDOM("<!DOCTYPE html><body><div id='konfetti-container'></div></body>");
 
 import { getPunkteFuerTag, getCurrentStreak, toggleTask } from "../js/tasks.js";
 import { updateState, getState } from "../js/state.js";

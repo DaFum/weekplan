@@ -102,6 +102,10 @@ export function updateState(newState) {
         return;
     }
 
+    if (Object.prototype.hasOwnProperty.call(safeNewState, "tasks") && !Array.isArray(safeNewState.tasks)) {
+        safeNewState.tasks = [];
+    }
+
     const oldState = { ...state };
     state = { ...state, ...safeNewState };
     notifyListeners(safeNewState, oldState);

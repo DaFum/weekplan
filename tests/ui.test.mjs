@@ -1,19 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { JSDOM } from "jsdom";
 
-process.env.NODE_ENV = "test";
+import { createTestDOM } from "./setup.mjs";
 
-const dom = new JSDOM(`<!DOCTYPE html><body>
+createTestDOM(`<!DOCTYPE html><body>
     <div id="streak-value">0</div>
     <div id="day-card" class="tag-karte"><span class="score-value"></span></div>
-</body>`, { url: "http://localhost" });
-
-globalThis.window = dom.window;
-globalThis.document = dom.window.document;
-globalThis.HTMLElement = dom.window.HTMLElement;
-globalThis.HTMLInputElement = dom.window.HTMLInputElement;
-globalThis.Node = dom.window.Node;
+</body>`);
 
 test("[UI] updateStreakTracker renders streak for sparse tasks", async () => {
     const { updateStreakTracker } = await import("../js/ui.js");
