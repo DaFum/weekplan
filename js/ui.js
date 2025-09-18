@@ -158,7 +158,7 @@ function renderWeeklyGoalTrackerStructure() {
  */
 export function updateWeeklyGoalTracker(state) {
     const { tasks, wochenZiel } = state;
-    const tasksArray = Array.isArray(tasks) ? tasks : [];
+    const tasksArray = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
     const startOfWeek = getStartOfWeek(new Date());
     const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
     const tasksDone = tasksArray
