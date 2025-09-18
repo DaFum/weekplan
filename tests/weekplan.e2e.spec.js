@@ -25,6 +25,10 @@ const MIME_TYPES = new Map([
   ['.webmanifest', 'application/manifest+json']
 ]);
 
+MIME_TYPES.set('.woff2', 'font/woff2');
+MIME_TYPES.set('.woff', 'font/woff');
+MIME_TYPES.set('.ttf', 'font/ttf');
+
 test.use({
   locale: 'de-DE'
 });
@@ -48,7 +52,10 @@ test.beforeAll(async () => {
       const data = await fs.readFile(filePath);
       const ext = path.extname(filePath).toLowerCase();
       const contentType = MIME_TYPES.get(ext) ?? 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control': 'no-store'
+      });
       res.end(data);
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
@@ -110,11 +117,11 @@ test('zeigt den Header und die Schnellaktionen an', async ({ page }) => {
 
 test('öffnet das Design-Menü über den Toggle-Button', async ({ page }) => {
   const menu = page.locator('#theme-menu');
-  await expect(menu).toHaveClass(/hidden/);
+  await expect(menu).toBeHidden();
 
   await page.getByRole('button', { name: /Design ändern/ }).click();
 
-  await expect(menu).not.toHaveClass(/hidden/);
+  await expect(menu).toBeVisible();
   await expect(menu.locator('.theme-option')).toHaveCount(5);
 });
 
@@ -143,7 +150,9 @@ test.describe('Responsives Layout', () => {
       });
       expect(actionWrap).toBe('wrap');
 
+      const menu = page.locator('#theme-menu');
       await page.getByRole('button', { name: /Design ändern/ }).click();
+      await expect(menu).toBeVisible();
 
       const layoutMetrics = await page.evaluate(() => {
         const actions = document.querySelector('.header-actions');
@@ -163,9 +172,6 @@ test.describe('Responsives Layout', () => {
       });
 
       expect(layoutMetrics).not.toBeNull();
-      if (!layoutMetrics) {
-        throw new Error('Layout-Metriken konnten nicht ermittelt werden.');
-      }
 
       expect(layoutMetrics.menuTop).toBeGreaterThanOrEqual(layoutMetrics.actionsBottom - 2);
       expect(Math.abs(layoutMetrics.menuCenter - layoutMetrics.actionsCenter)).toBeLessThanOrEqual(8);
@@ -198,7 +204,9 @@ test.describe('Responsives Layout', () => {
       expect(actionsStyles?.wrap).toBe('nowrap');
       expect(actionsStyles?.justify).toBe('flex-end');
 
+      const menu = page.locator('#theme-menu');
       await page.getByRole('button', { name: /Design ändern/ }).click();
+      await expect(menu).toBeVisible();
 
       const desktopMetrics = await page.evaluate(() => {
         const actions = document.querySelector('.header-actions');
@@ -221,9 +229,6 @@ test.describe('Responsives Layout', () => {
       });
 
       expect(desktopMetrics).not.toBeNull();
-      if (!desktopMetrics) {
-        throw new Error('Desktop-Metriken konnten nicht ermittelt werden.');
-      }
 
       expect(desktopMetrics.menuRight).toBeLessThanOrEqual(desktopMetrics.actionsRight + 12);
       expect(desktopMetrics.menuRight).toBeGreaterThanOrEqual(desktopMetrics.toggleRight - 2);

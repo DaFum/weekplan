@@ -15,6 +15,7 @@
 }
 
 /* Utility classes for CSS variables (Tailwind compatible) */
+.hidden            { display: none !important; }
 .text-secondary    { color: var(--text-secondary); }
 .text-accent       { color: var(--text-accent); }
 .bg-accent         { background-color: var(--bg-accent); }
@@ -392,6 +393,8 @@ body.theme-forest .header-title {
     border: 1px solid var(--border-color);
     box-shadow: 0 20px 45px -15px var(--shadow-color);
     padding: 1rem;
+    max-height: 70vh;
+    overflow: auto;
 }
 
 .theme-menu-title {
@@ -821,7 +824,8 @@ body.theme-forest .header-title {
     position: relative;
 }
 
-.header-container > div:first-child {
+.header-container > div:first-child,
+.header-container > .header-main {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -844,7 +848,8 @@ body.theme-forest .header-title {
         text-align: left;
     }
 
-    .header-container > div:first-child {
+    .header-container > div:first-child,
+    .header-container > .header-main {
         align-items: flex-start;
     }
 
