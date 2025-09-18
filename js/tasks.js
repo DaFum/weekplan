@@ -7,6 +7,14 @@ import { formatDisplayDate, getISODate, getStartOfWeek, parseLocalISODate } from
 
 const TASK_NAME_MAX_LENGTH = 100;
 const TASK_NAME_ERROR_MESSAGE = "Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.";
+const ALLOWED_TASK_FIELDS = new Set([
+    "id",
+    "name",
+    "kategorie",
+    "date",
+    "durationInMinutes",
+    "erledigt"
+]);
 
 /**
  * Gets the number of completed tasks for a specific day.
@@ -271,6 +279,21 @@ function parseDurationValue(kategorie, durationInput) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function sanitizeTaskData(taskData) {
+    if (!taskData || typeof taskData !== "object") {
+        return {};
+    }
+
+    const sanitized = Object.create(null);
+    for (const [key, value] of Object.entries(taskData)) {
+        if (!ALLOWED_TASK_FIELDS.has(key)) {
+            continue;
+        }
+        sanitized[key] = value;
+    }
+    return sanitized;
+}
+
 function updateExistingTask(taskId, taskData) {
     const { tasks } = getState();
     const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -282,14 +305,16 @@ function updateExistingTask(taskId, taskData) {
     }
 
     const newTasks = [...safeTasks];
-    newTasks[taskIndex] = { ...safeTasks[taskIndex], ...taskData };
+    const sanitizedUpdate = sanitizeTaskData(taskData);
+    newTasks[taskIndex] = { ...safeTasks[taskIndex], ...sanitizedUpdate };
     updateState({ tasks: newTasks });
 }
 
 function createTask(taskData) {
     const { tasks } = getState();
     const safeTasks = Array.isArray(tasks) ? tasks.filter(task => task && typeof task === "object") : [];
-    const newTask = { ...taskData, id: `task-${Date.now()}`, erledigt: false };
+    const sanitizedTaskData = sanitizeTaskData(taskData);
+    const newTask = { ...sanitizedTaskData, id: `task-${Date.now()}`, erledigt: false };
     updateState({ tasks: [...safeTasks, newTask] });
     notifyAboutNewTask(newTask);
 }

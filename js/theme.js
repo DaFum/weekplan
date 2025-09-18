@@ -28,7 +28,8 @@ function getNextThemeId(currentTheme) {
     const index = THEME_OPTIONS.findIndex(option => option.id === normalized);
     if (index === -1) return FALLBACK_THEME;
     const nextIndex = (index + 1) % THEME_OPTIONS.length;
-    return THEME_OPTIONS[nextIndex].id;
+    const nextOption = THEME_OPTIONS[nextIndex];
+    return typeof nextOption?.id === "string" ? nextOption.id : FALLBACK_THEME;
 }
 
 /**
@@ -103,7 +104,12 @@ function updateThemeButton(theme) {
 function updateThemeMenu(theme) {
     const normalized = normalizeTheme(theme);
     document.querySelectorAll(".theme-option").forEach(button => {
-        const isActive = button instanceof HTMLButtonElement && button.dataset.theme === normalized;
+        if (!(button instanceof HTMLButtonElement)) {
+            return;
+        }
+
+        const datasetTheme = typeof button.dataset.theme === "string" ? button.dataset.theme : "";
+        const isActive = datasetTheme === normalized;
         if (isActive) {
             button.classList.add("active");
             button.setAttribute("aria-checked", "true");

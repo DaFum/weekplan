@@ -10,6 +10,7 @@ let state = {
     currentGame: null, // The currently active game
     theme: "sky", // The current theme
     audioInitialized: false,
+    audioInitializing: false,
 
     // Game state
     memory: {
@@ -78,10 +79,32 @@ export function getState() {
  * Updates the internal state and notifies subscribers whose subscribed state parts have changed.
  * @param {Object} newState - An object with the keys to be updated.
  */
+const FORBIDDEN_STATE_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+function sanitizeStateUpdate(partial) {
+    if (!partial || typeof partial !== "object") {
+        return {};
+    }
+
+    const safeUpdate = Object.create(null);
+    for (const [key, value] of Object.entries(partial)) {
+        if (typeof key !== "string" || FORBIDDEN_STATE_KEYS.has(key)) {
+            continue;
+        }
+        safeUpdate[key] = value;
+    }
+    return safeUpdate;
+}
+
 export function updateState(newState) {
+    const safeNewState = sanitizeStateUpdate(newState);
+    if (Object.keys(safeNewState).length === 0) {
+        return;
+    }
+
     const oldState = { ...state };
-    state = { ...state, ...newState };
-    notifyListeners(newState, oldState);
+    state = { ...state, ...safeNewState };
+    notifyListeners(safeNewState, oldState);
 }
 
 /**
@@ -108,7 +131,9 @@ export function subscribe(key, callback) {
  */
 function notifyListeners(newState, oldState) {
     // Determine which keys have changed
-    const changedKeys = Object.keys(newState).filter(key => newState[key] !== oldState[key]);
+    const changedKeys = Object.entries(newState)
+        .filter(([key, value]) => value !== oldState[key])
+        .map(([key]) => key);
 
     if (changedKeys.length === 0) return;
 

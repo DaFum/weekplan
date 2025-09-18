@@ -31,7 +31,12 @@ async function loadSortable() {
 }
 
 if (!isTestEnvironment) {
-    Sortable = await loadSortable();
+    try {
+        Sortable = await loadSortable();
+    } catch (error) {
+        console.error('Failed to initialize SortableJS.', error);
+        Sortable = null;
+    }
 } else {
     Sortable = null;
 }

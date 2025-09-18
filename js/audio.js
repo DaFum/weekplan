@@ -56,9 +56,17 @@ async function loadTone() {
  * @param {Record<string, any>} sounds - Current sound objects.
  */
 function disposeSounds(sounds) {
-    for (const key of Object.keys(sounds)) {
+    if (typeof sounds !== 'object' || sounds === null) {
+        return;
+    }
+
+    for (const [key, sound] of Object.entries(sounds)) {
+        if (typeof sound?.dispose !== 'function') {
+            continue;
+        }
+
         try {
-            sounds[key]?.dispose?.();
+            sound.dispose();
         } catch (error) {
             console.warn(`Failed to dispose synth "${key}":`, error);
         }
