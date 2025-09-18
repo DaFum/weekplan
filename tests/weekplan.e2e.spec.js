@@ -117,7 +117,7 @@ test('öffnet das Design-Menü über den Toggle-Button', async ({ page }) => {
   await page.getByRole('button', { name: /Design ändern/ }).click();
 
   await expect(menu).toBeVisible();
-  await expect(menu.locator('.theme-option')).toHaveCount(5);
+  await expect(menu.getByRole('menuitemradio')).toHaveCount(5);
 });
 
 test('öffnet den Aufgaben-Dialog über den Floating Button', async ({ page }) => {
