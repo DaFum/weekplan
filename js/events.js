@@ -10,22 +10,26 @@ import { closeModal, closePromptModal, showModalElement } from "./modal.js";
 
 const BODY_ACTIVATION_EVENTS = ["pointerdown", "click"];
 
-let listenersInitialized = false;
-let audioActivationHandler = null;
-let audioActivationCompleted = false;
-let delegatedClicksInitialized = false;
-let formSubmissionsInitialized = false;
-let keyboardShortcutsInitialized = false;
+const initStatus = {
+    listeners: false,
+    delegatedClicks: false,
+    formSubmissions: false,
+    keyboardShortcuts: false,
+    audio: {
+        handler: null,
+        completed: false,
+    },
+};
 
 /**
  * Initializes central event handlers for the user interface.
  */
 export function initEventListeners() {
-    if (listenersInitialized) {
+    if (initStatus.listeners) {
         return;
     }
 
-    listenersInitialized = true;
+    initStatus.listeners = true;
     setupAudioInitialization();
     setupDelegatedClicks();
     setupFormSubmissions();
@@ -36,13 +40,15 @@ export function initEventListeners() {
  * Ensures the AudioContext is activated on the first user gesture.
  */
 function setupAudioInitialization() {
-    if (audioActivationCompleted || audioActivationHandler) {
+    const { audio } = initStatus;
+
+    if (audio.completed || audio.handler) {
         return;
     }
 
-    audioActivationHandler = createAudioActivationHandler();
+    audio.handler = createAudioActivationHandler();
     BODY_ACTIVATION_EVENTS.forEach(eventName => {
-        document.body.addEventListener(eventName, audioActivationHandler);
+        document.body.addEventListener(eventName, audio.handler);
     });
 }
 
@@ -65,11 +71,11 @@ function createAudioActivationHandler() {
         }
 
         activated = true;
-        audioActivationCompleted = true;
+        initStatus.audio.completed = true;
         BODY_ACTIVATION_EVENTS.forEach(eventName => {
             document.body.removeEventListener(eventName, handler);
         });
-        audioActivationHandler = null;
+        initStatus.audio.handler = null;
     };
 
     return handler;
@@ -107,20 +113,20 @@ async function activateAudioContext() {
  * Sets up the global click delegation handler.
  */
 function setupDelegatedClicks() {
-    if (delegatedClicksInitialized) {
+    if (initStatus.delegatedClicks) {
         return;
     }
 
-    delegatedClicksInitialized = true;
+    initStatus.delegatedClicks = true;
     document.body.addEventListener("click", handleBodyClick);
 }
 
 function setupKeyboardShortcuts() {
-    if (keyboardShortcutsInitialized) {
+    if (initStatus.keyboardShortcuts) {
         return;
     }
 
-    keyboardShortcutsInitialized = true;
+    initStatus.keyboardShortcuts = true;
     document.addEventListener("keydown", handleGlobalKeydown);
 }
 
@@ -153,11 +159,11 @@ function handleGlobalKeydown(event) {
  * Registers submit handlers for forms managed by the application.
  */
 function setupFormSubmissions() {
-    if (formSubmissionsInitialized) {
+    if (initStatus.formSubmissions) {
         return;
     }
 
-    formSubmissionsInitialized = true;
+    initStatus.formSubmissions = true;
     const taskForm = document.getElementById("task-form");
     if (taskForm instanceof HTMLFormElement) {
         taskForm.addEventListener("submit", saveTask);
