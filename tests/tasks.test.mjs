@@ -1,14 +1,24 @@
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 import { createTestDOM } from "./setup.mjs";
-
-createTestDOM("<!DOCTYPE html><body><div id='konfetti-container'></div></body>");
 
 import { getPunkteFuerTag, getCurrentStreak, toggleTask } from "../js/tasks.js";
 import { updateState, getState } from "../js/state.js";
 
 const todayISO = new Date().toISOString().slice(0, 10);
+
+let cleanupDOM;
+
+beforeEach(() => {
+    ({ cleanup: cleanupDOM } = createTestDOM("<!DOCTYPE html><body><div id='konfetti-container'></div></body>"));
+});
+
+afterEach(() => {
+    cleanupDOM?.();
+    cleanupDOM = undefined;
+    updateState({ tasks: [], sounds: {} });
+});
 
 test("[Function] getPunkteFuerTag ignores nullish tasks", () => {
     const tasks = [null, undefined, { date: todayISO, erledigt: true }, { date: todayISO, erledigt: false }];
@@ -36,7 +46,4 @@ test("[Function] toggleTask skips invalid entries", () => {
     const { tasks } = getState();
     assert.equal(tasks[0], null);
     assert.equal(tasks[1].erledigt, true);
-
-    // Cleanup
-    updateState({ tasks: [] });
 });

@@ -1,12 +1,21 @@
-import test from "node:test";
+import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 import { createTestDOM } from "./setup.mjs";
 
-createTestDOM(`<!DOCTYPE html><body>
-    <div id="streak-value">0</div>
-    <div id="day-card" class="tag-karte"><span class="score-value"></span></div>
-</body>`);
+let cleanupDOM;
+
+beforeEach(() => {
+    ({ cleanup: cleanupDOM } = createTestDOM(`<!DOCTYPE html><body>
+        <div id="streak-value">0</div>
+        <div id="day-card" class="tag-karte"><span class="score-value"></span></div>
+    </body>`));
+});
+
+afterEach(() => {
+    cleanupDOM?.();
+    cleanupDOM = undefined;
+});
 
 test("[UI] updateStreakTracker renders streak for sparse tasks", async () => {
     const { updateStreakTracker } = await import("../js/ui.js");
