@@ -279,7 +279,7 @@ function parseDurationValue(kategorie, durationInput) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
-function sanitizeTaskData(taskData) {
+export function sanitizeTaskData(taskData) {
     if (!taskData || typeof taskData !== "object") {
         return {};
     }

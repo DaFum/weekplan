@@ -85,7 +85,7 @@ const FORBIDDEN_STATE_KEYS = new Set(["__proto__", "prototype", "constructor"]);
  * Rejects prototype-polluting keys before merging state updates to preserve
  * object integrity and guard against malicious payloads.
  */
-function sanitizeStateUpdate(partial) {
+export function sanitizeStateUpdate(partial) {
     if (!partial || typeof partial !== "object") {
         return {};
     }
