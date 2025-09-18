@@ -337,6 +337,10 @@ body.theme-forest .header-title {
     display: flex;
     gap: 0.75rem;
     align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    position: relative;
+    width: 100%;
 }
 
 .header-action-btn {
@@ -379,8 +383,8 @@ body.theme-forest .header-title {
 
 .theme-menu {
     position: absolute;
-    top: 5.5rem;
-    right: 1.5rem;
+    top: calc(100% + 0.75rem);
+    right: 0;
     z-index: 40;
     width: min(20rem, 90vw);
     background: var(--bg-secondary);
@@ -426,16 +430,6 @@ body.theme-forest .header-title {
 .theme-option.active {
     border-color: var(--text-accent);
     box-shadow: 0 8px 25px -12px var(--shadow-color);
-}
-
-@media (max-width: 640px) {
-    .theme-menu {
-        position: fixed;
-        top: auto;
-        bottom: 1.5rem;
-        right: 1rem;
-        left: 1rem;
-    }
 }
 
 
@@ -818,17 +812,52 @@ body.theme-forest .header-title {
 
 /* Header container styles */
 .header-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
     text-align: center;
-    margin: 1.5rem 0;
+    margin: 1.5rem 0 2rem;
     position: relative;
 }
 
-.theme-toggle {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 50%;
+.header-container > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+@media (max-width: 767px) {
+    .theme-menu {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+    }
+}
+
+@media (min-width: 768px) {
+    .header-container {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+    }
+
+    .header-container > div:first-child {
+        align-items: flex-start;
+    }
+
+    .header-actions {
+        flex-wrap: nowrap;
+        width: auto;
+        justify-content: flex-end;
+    }
+
+    .theme-menu {
+        left: auto;
+        transform: none;
+    }
 }
 
 /* Coins display styles */
