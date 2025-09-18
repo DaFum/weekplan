@@ -2,8 +2,8 @@
 import { getState, updateState } from "./state.js";
 import { addCoins } from "./games.js";
 import { starteKonfetti } from "./effects.js";
-import { closeModal, openPromptModal } from "./events.js";
-import { formatDisplayDate, getISODate, getStartOfWeek } from "./utils.js";
+import { closeModal, openPromptModal } from "./modal.js";
+import { formatDisplayDate, getISODate, getStartOfWeek, parseLocalISODate } from "./utils.js";
 
 const TASK_NAME_MAX_LENGTH = 100;
 const TASK_NAME_ERROR_MESSAGE = "Aufgabenname muss zwischen 1 und 100 Zeichen lang sein.";
@@ -173,7 +173,8 @@ export function setPcTimeLimit() {
             if (Number.isFinite(n) && n >= 0) {
                 updateState({ pcStundenGesamt: n });
             }
-        }
+        },
+        { step: 0.5 }
     );
 }
 
@@ -195,7 +196,8 @@ export function setWeeklyGoal() {
             if (Number.isFinite(n) && n >= 0) {
                 updateState({ wochenZiel: n });
             }
-        }
+        },
+        { step: 1 }
     );
 }
 
@@ -271,15 +273,18 @@ function notifyAboutNewTask(task) {
     }
 
     try {
-        const date = task.date ? new Date(task.date) : null;
+        const date = task.date ? parseLocalISODate(task.date) : null;
         const bodyText = date && !Number.isNaN(date.valueOf())
             ? `Am ${formatDisplayDate(date)}`
             : undefined;
 
-        new Notification(`Neue Aufgabe: ${task.name}`, {
-            body: bodyText,
+        const options = {
             icon: "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/72x72/1f4cb.png"
-        });
+        };
+        if (bodyText) {
+            options.body = bodyText;
+        }
+        new Notification(`Neue Aufgabe: ${task.name}`, options);
     } catch (error) {
         console.warn("Benachrichtigung konnte nicht angezeigt werden.", error);
     }

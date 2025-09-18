@@ -226,8 +226,19 @@ function updateAchievementsTracker(state) {
         const badge = document.createElement("div");
         badge.className = `achievement-badge${achieved ? " completed" : ""}`;
         badge.setAttribute("role", "status");
-        badge.setAttribute("aria-label", `${achievement.label}: ${achieved ? "freigeschaltet" : "noch offen"}`);
-        badge.innerHTML = `<span aria-hidden="true">${achievement.emoji}</span><span>${achievement.label}</span>`;
+        badge.setAttribute(
+            "aria-label",
+            `${achievement.label}: ${achieved ? "freigeschaltet" : "noch offen"}`
+        );
+
+        const emojiSpan = document.createElement("span");
+        emojiSpan.setAttribute("aria-hidden", "true");
+        emojiSpan.textContent = achievement.emoji;
+
+        const labelSpan = document.createElement("span");
+        labelSpan.textContent = achievement.label;
+
+        badge.append(emojiSpan, labelSpan);
         listEl.appendChild(badge);
     });
 
@@ -264,7 +275,7 @@ export function renderPlan(state) {
     for (let week = 0; week < 4; week++) {
         const weekStart = new Date(startOfCurrentWeek); weekStart.setDate(weekStart.getDate() + week * 7);
         const navBtn = document.createElement("button");
-        navBtn.innerHTML = `Woche ${week + 1}`;
+        navBtn.textContent = `Woche ${week + 1}`;
         navBtn.className = "nav-button";
         navBtn.dataset.weekIndex = week;
         wochenNav.appendChild(navBtn);
@@ -285,15 +296,42 @@ export function renderPlan(state) {
             tagesKarte.id = isoDate;
             tagesKarte.className = `tag-karte p-5 rounded-2xl shadow-lg ${isToday ? "today-card" : ""}`;
 
-            tagesKarte.innerHTML = `
-                <div class="day-header">
-                    <div>
-                        <h3 class="day-title">${formatDisplayDate(currentDate).split(",")[0]}</h3>
-                        <div class="day-date">${formatDisplayDate(currentDate).split(",")[1]}</div>
-                    </div>
-                    <div class="day-score"><span class="text-yellow-500">⭐</span><span class="score-value"> 0</span></div>
-                </div>
-                <div id="aufgaben-liste-${isoDate}" class="tasks-container space-y-3"></div>`;
+            const dayHeader = document.createElement("div");
+            dayHeader.className = "day-header";
+
+            const headerTextContainer = document.createElement("div");
+
+            const [dayTitleText, dayDateText] = formatDisplayDate(currentDate).split(",");
+            const dayTitle = document.createElement("h3");
+            dayTitle.className = "day-title";
+            dayTitle.textContent = dayTitleText ?? "";
+
+            const dayDate = document.createElement("div");
+            dayDate.className = "day-date";
+            dayDate.textContent = dayDateText?.trim() ?? "";
+
+            headerTextContainer.append(dayTitle, dayDate);
+
+            const dayScore = document.createElement("div");
+            dayScore.className = "day-score";
+
+            const starSpan = document.createElement("span");
+            starSpan.className = "text-yellow-500";
+            starSpan.setAttribute("aria-hidden", "true");
+            starSpan.textContent = "⭐";
+
+            const scoreValue = document.createElement("span");
+            scoreValue.className = "score-value";
+            scoreValue.textContent = "0";
+
+            dayScore.append(starSpan, document.createTextNode(" "), scoreValue);
+            dayHeader.append(headerTextContainer, dayScore);
+
+            const taskList = document.createElement("div");
+            taskList.id = `aufgaben-liste-${isoDate}`;
+            taskList.className = "tasks-container space-y-3";
+
+            tagesKarte.append(dayHeader, taskList);
             tagesContainer.appendChild(tagesKarte);
         }
         wochenAnsicht.appendChild(tagesContainer);

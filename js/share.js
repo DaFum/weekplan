@@ -1,6 +1,6 @@
 // Utilities for exporting and printing the week plan
 import { getState } from "./state.js";
-import { formatDisplayDate } from "./utils.js";
+import { formatDisplayDate, parseLocalISODate } from "./utils.js";
 
 function createDownload(data, filename) {
     const blob = new Blob([data], { type: "application/json" });
@@ -56,16 +56,21 @@ export function printWeekPlan() {
 export function getPrintableTitle() {
     const state = getState();
     const tasks = Array.isArray(state.tasks) ? state.tasks : [];
-    const upcomingTask = tasks
+    const upcomingEntry = tasks
         .filter(task => !task.erledigt && task.date)
-        .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+        .map(task => {
+            const date = parseLocalISODate(task.date);
+            return date && !Number.isNaN(date.valueOf()) ? { task, date } : null;
+        })
+        .filter(entry => entry !== null)
+        .sort((a, b) => a.date - b.date)[0];
 
-    if (!upcomingTask) {
+    if (!upcomingEntry) {
         return "Wochen-Power";
     }
 
     try {
-        const date = new Date(upcomingTask.date);
+        const { task: upcomingTask, date } = upcomingEntry;
         return `${upcomingTask.name} · ${formatDisplayDate(date)}`;
     } catch (error) {
         console.warn("Could not format upcoming task for printable title", error);
