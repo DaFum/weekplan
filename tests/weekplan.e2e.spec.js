@@ -38,10 +38,10 @@ test.beforeAll(async () => {
     try {
       const requestUrl = new URL(req.url ?? '/', 'http://localhost');
       let relativePath = decodeURIComponent(requestUrl.pathname);
-      if (relativePath.endsWith('/')) {
-        relativePath = `${relativePath}index.html`;
-      }
-
+      const normalizedPath = path.normalize(relativePath).replace(/^\/+/, '');
+      const filePath = path.resolve(rootDir, normalizedPath);
+      if (!filePath.startsWith(path.resolve(rootDir))) {
+        res.writeHead(403).end('Forbidden');
       const normalizedPath = path.normalize(relativePath).replace(/^\/+/, '');
       const filePath = path.join(rootDir, normalizedPath);
       if (!filePath.startsWith(rootDir)) {
