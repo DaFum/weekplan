@@ -364,11 +364,12 @@ export function showWoche(index) {
  * @param {Array} tasks - The array of tasks.
  */
 function renderAllTasks(tasks) {
-    lastRenderedTasks = tasks;
+    const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
+    lastRenderedTasks = safeTasks;
     document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
         list.innerHTML = "";
         const isoDate = list.id.replace("aufgaben-liste-", "");
-        const tasksForDay = tasks.filter(t => t.date === isoDate);
+        const tasksForDay = safeTasks.filter(t => t.date === isoDate);
         if (tasksForDay.length === 0) {
             list.appendChild(createEmptyState());
         } else {
@@ -382,7 +383,7 @@ function renderAllTasks(tasks) {
  * @param {Object} state - The application state.
  */
 export function updateTasksUI(state) {
-    const newTasks = state.tasks;
+    const newTasks = Array.isArray(state.tasks) ? state.tasks.filter(Boolean) : [];
     const addedTasks = newTasks.filter(newTask => !lastRenderedTasks.some(oldTask => oldTask.id === newTask.id));
     const deletedTasks = lastRenderedTasks.filter(oldTask => !newTasks.some(newTask => newTask.id === oldTask.id));
     const updatedTasks = newTasks.filter(newTask => {
