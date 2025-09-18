@@ -161,7 +161,9 @@ export function updateWeeklyGoalTracker(state) {
     const tasksArray = Array.isArray(tasks) ? tasks : [];
     const startOfWeek = getStartOfWeek(new Date());
     const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
-    const tasksDone = tasksArray.filter(t => t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek)).length;
+    const tasksDone = tasksArray
+        .filter(t => t && t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek))
+        .length;
     const progress = wochenZiel > 0 ? Math.min((tasksDone / wochenZiel) * 100, 100) : 0;
 
     const goalTextEl = document.getElementById("weekly-goal-text");
