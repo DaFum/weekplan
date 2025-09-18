@@ -108,7 +108,7 @@ function flipCard(index) {
     if (!Array.isArray(cards) || !Number.isInteger(Number(index)) || index < 0 || index >= cards.length) {
         return;
     }
-    const symbol = cards[index];
+    const symbol = typeof cards[index] === "string" ? cards[index] : String(cards[index] ?? "");
 
     // Prevent flipping more than two cards, or flipping an already flipped or matched card
     if (flippedCards.length === 2 || flippedCards.includes(index) || matchedSymbols.includes(symbol)) {
@@ -140,9 +140,23 @@ function checkMatch() {
     let { memory, sounds } = getState();
     let { flippedCards, cards, matchedPairs, score, matchedSymbols } = memory;
 
+    if (!Array.isArray(flippedCards) || flippedCards.length !== 2) {
+        updateState({ memory: { ...memory, flippedCards: [] } });
+        renderMemoryBoard();
+        return;
+    }
+
     const [index1, index2] = flippedCards;
-    const symbol1 = cards[index1];
-    const symbol2 = cards[index2];
+    const indices = [index1, index2];
+    const hasInvalidIndex = indices.some(idx => !Number.isInteger(idx) || idx < 0 || idx >= cards.length);
+    if (hasInvalidIndex) {
+        updateState({ memory: { ...memory, flippedCards: [] } });
+        renderMemoryBoard();
+        return;
+    }
+
+    const symbol1 = typeof cards[index1] === "string" ? cards[index1] : String(cards[index1] ?? "");
+    const symbol2 = typeof cards[index2] === "string" ? cards[index2] : String(cards[index2] ?? "");
 
     if (symbol1 === symbol2) {
         // If the cards match, update the score and matched pairs

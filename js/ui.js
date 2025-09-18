@@ -6,6 +6,8 @@ import { updateMetaBar } from "./theme.js";
 import { getPunkteFuerTag, getCurrentStreak } from "./tasks.js";
 
 let Sortable;
+const isTestEnvironment = typeof process !== "undefined" && process.env?.NODE_ENV === "test";
+
 async function loadSortable() {
   try {
     const mod = await import('https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sortable.esm.js');
@@ -27,7 +29,17 @@ async function loadSortable() {
     }
   }
 }
-Sortable = await loadSortable();
+
+if (!isTestEnvironment) {
+    try {
+        Sortable = await loadSortable();
+    } catch (error) {
+        console.error('Failed to initialize SortableJS.', error);
+        Sortable = null;
+    }
+} else {
+    Sortable = null;
+}
 
 // Cache for the last rendered tasks to optimize UI updates
 let lastRenderedTasks = [];

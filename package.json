@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "test:functions": "node --test tests/parseLocalISODate.test.mjs tests/tasks.test.mjs",
+    "test:ui": "node --test tests/ui.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^23.0.1"
   }
 }
