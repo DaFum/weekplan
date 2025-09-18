@@ -70,14 +70,9 @@ test.beforeAll(async () => {
     server?.listen(0, resolve);
   });
 
-  const address = server?.address();
-  if (address && typeof address === 'object') {
-    baseURL = `http://127.0.0.1:${address.port}`;
+  if (server) {
+    await new Promise(resolve => server.close(resolve));
   }
-});
-
-test.afterAll(async () => {
-  await new Promise(resolve => {
     if (server) {
       server.close(() => resolve(undefined));
       server = null;
