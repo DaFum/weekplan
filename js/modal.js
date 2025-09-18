@@ -45,7 +45,7 @@ export function closeModal() {
  * @param {string} label - Accessible label describing the expected input.
  * @param {string | number | null | undefined} initialValue - Initial value to
  *   populate in the prompt input field.
- * @param {(value: string) => void} callback - Function invoked with the input
+ * @param {(value: number) => void} callback - Function invoked with the input
  *   value after successful submission.
  * @param {{ step?: number }} [options] - Optional configuration, currently
  *   supporting a custom numeric `step` attribute for the input.
