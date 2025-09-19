@@ -22,7 +22,7 @@ const MIME_TYPES = new Map([
   ['.png', 'image/png'],
   ['.jpg', 'image/jpeg'],
   ['.jpeg', 'image/jpeg'],
-  ['.webmanifest', 'application/manifest+json']
+  ['.webmanifest', 'application/manifest+json'],
 ]);
 
 MIME_TYPES.set('.woff2', 'font/woff2');
@@ -30,7 +30,7 @@ MIME_TYPES.set('.woff', 'font/woff');
 MIME_TYPES.set('.ttf', 'font/ttf');
 
 test.use({
-  locale: 'de-DE'
+  locale: 'de-DE',
 });
 
 test.beforeAll(async () => {
@@ -43,6 +43,12 @@ test.beforeAll(async () => {
       }
       if (relativePath === '') {
         relativePath = '/index.html';
+      }
+      // Early path traversal detection: any '..' segment before normalization indicates an attempt
+      // We check both raw and decoded forms to be defensive.
+      if (/\.\.([\\/])/.test(relativePath) || relativePath.includes('..')) {
+        res.writeHead(403).end('Forbidden');
+        return;
       }
       const normalizedPath = path.normalize(relativePath).replace(/^\/+/, '');
       const filePath = path.join(rootDir, normalizedPath);
@@ -61,11 +67,11 @@ test.beforeAll(async () => {
       const contentType = MIME_TYPES.get(ext) ?? 'application/octet-stream';
       res.writeHead(200, {
         'Content-Type': contentType,
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
       });
       res.end(data);
     } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      if (typeof error === 'object' && error?.code === 'ENOENT') {
         res.writeHead(404).end('Not found');
         return;
       }
@@ -73,7 +79,7 @@ test.beforeAll(async () => {
     }
   });
 
-  await new Promise(resolve => {
+  await new Promise((resolve) => {
     server?.listen(0, resolve);
   });
 
@@ -89,7 +95,7 @@ test.beforeAll(async () => {
   } else {
     if (server) {
       await new Promise((resolve, reject) => {
-        server.close(err => {
+        server.close((err) => {
           if (err) {
             return reject(err);
           }
@@ -97,10 +103,15 @@ test.beforeAll(async () => {
         });
       });
       server = null;
+    }
+    baseURL = '';
+    throw new Error('Server address unavailable');
+  }
+});
 
 test.afterAll(async () => {
   if (server) {
-    await new Promise(resolve => server.close(resolve));
+    await new Promise((resolve) => server.close(resolve));
     server = null;
     baseURL = '';
   }
@@ -110,7 +121,6 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     class FakeNotification {
       static permission = 'default';
-      constructor() {}
       static async requestPermission() {
         FakeNotification.permission = 'granted';
         return FakeNotification.permission;
@@ -120,7 +130,7 @@ test.beforeEach(async ({ page }) => {
     Object.defineProperty(window, 'Notification', {
       configurable: true,
       writable: true,
-      value: FakeNotification
+      value: FakeNotification,
     });
   });
 
@@ -186,15 +196,19 @@ test.describe('Responsive layout', () => {
           actionsBottom: actionsRect.bottom,
           menuTop: menuRect.top,
           actionsCenter: actionsRect.left + actionsRect.width / 2,
-          menuCenter: menuRect.left + menuRect.width / 2
+          menuCenter: menuRect.left + menuRect.width / 2,
         };
       });
 
       expect(layoutMetrics).not.toBeNull();
 
       // Allow a small tolerance for layout metrics due to cross-browser rendering differences.
-      expect(layoutMetrics.menuTop).toBeGreaterThanOrEqual(layoutMetrics.actionsBottom - 2);
-      expect(Math.abs(layoutMetrics.menuCenter - layoutMetrics.actionsCenter)).toBeLessThanOrEqual(8);
+      expect(layoutMetrics.menuTop).toBeGreaterThanOrEqual(
+        layoutMetrics.actionsBottom - 2
+      );
+      expect(
+        Math.abs(layoutMetrics.menuCenter - layoutMetrics.actionsCenter)
+      ).toBeLessThanOrEqual(8);
     });
   });
 
@@ -216,7 +230,7 @@ test.describe('Responsive layout', () => {
         const styles = getComputedStyle(actions);
         return {
           wrap: styles.flexWrap,
-          justify: styles.justifyContent
+          justify: styles.justifyContent,
         };
       });
 
@@ -244,16 +258,22 @@ test.describe('Responsive layout', () => {
           menuRight: menuRect.right,
           toggleRight: toggleRect.right,
           menuTop: menuRect.top,
-          toggleBottom: toggleRect.bottom
+          toggleBottom: toggleRect.bottom,
         };
       });
 
       expect(desktopMetrics).not.toBeNull();
 
       // Allow a small tolerance for layout metrics due to cross-browser rendering differences.
-      expect(desktopMetrics.menuRight).toBeLessThanOrEqual(desktopMetrics.actionsRight + 12);
-      expect(desktopMetrics.menuRight).toBeGreaterThanOrEqual(desktopMetrics.toggleRight - 2);
-      expect(desktopMetrics.menuTop).toBeGreaterThanOrEqual(desktopMetrics.toggleBottom - 2);
+      expect(desktopMetrics.menuRight).toBeLessThanOrEqual(
+        desktopMetrics.actionsRight + 12
+      );
+      expect(desktopMetrics.menuRight).toBeGreaterThanOrEqual(
+        desktopMetrics.toggleRight - 2
+      );
+      expect(desktopMetrics.menuTop).toBeGreaterThanOrEqual(
+        desktopMetrics.toggleBottom - 2
+      );
     });
   });
 });
@@ -284,28 +304,30 @@ test.describe('Static server', () => {
 });
 
 test.describe('Theme menu interactions', () => {
-  test('toggle button toggles menu visibility and aria-expanded', async ({ page }) => {
+  test('toggle button toggles menu visibility and aria-expanded', async ({
+    page,
+  }) => {
     const toggle = page.getByRole('button', { name: /Design ändern/ });
     const menu = page.locator('#theme-menu');
 
     // Initial state
     await expect(menu).toBeHidden();
-    const initialExpanded = await toggle.getAttribute('aria-expanded');
-    expect(initialExpanded === null || initialExpanded === 'false').toBeTruthy();
+    await expect(toggle).toHaveAttribute('aria-expanded', /^(false)?$/);
 
     // Open
     await toggle.click();
     await expect(menu).toBeVisible();
-    await expect(await toggle.getAttribute('aria-expanded')).toBe('true');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
     // Close
     await toggle.click();
     await expect(menu).toBeHidden();
-    const finalExpanded = await toggle.getAttribute('aria-expanded');
-    expect(finalExpanded === null || finalExpanded === 'false').toBeTruthy();
+    await expect(toggle).toHaveAttribute('aria-expanded', /^(false)?$/);
   });
 
-  test('selecting a theme updates checked state and menu can be closed with Escape', async ({ page }) => {
+  test('selecting a theme updates checked state and menu can be closed with Escape', async ({
+    page,
+  }) => {
     await page.getByRole('button', { name: /Design ändern/ }).click();
     const radios = page.getByRole('menuitemradio');
 
@@ -317,7 +339,9 @@ test.describe('Theme menu interactions', () => {
     await target.click();
 
     // Exactly one radio should be checked
-    await expect(page.getByRole('menuitemradio', { checked: true })).toHaveCount(1);
+    await expect(
+      page.getByRole('menuitemradio', { checked: true })
+    ).toHaveCount(1);
 
     // Close via Escape for accessibility
     await page.keyboard.press('Escape');
@@ -326,7 +350,9 @@ test.describe('Theme menu interactions', () => {
 });
 
 test.describe('Task dialog behavior', () => {
-  test('focuses task name input on open and closes with Escape', async ({ page }) => {
+  test('focuses task name input on open and closes with Escape', async ({
+    page,
+  }) => {
     await page.getByRole('button', { name: 'Neue Aufgabe erstellen' }).click();
 
     const modal = page.locator('#task-modal');

@@ -1,44 +1,28 @@
 // Import necessary functions and data from other modules
-import { getStartOfWeek, getISODate } from "./utils.js";
-import { getState, updateState } from "./state.js";
+import { getStartOfWeek, getISODate } from './utils.js';
+import { updateState } from './state.js';
 
 export const THEME_OPTIONS = [
-    { id: "sky", label: "Sky", icon: "🌤️" },
-    { id: "dark", label: "Dark Mode", icon: "🌙" },
-    { id: "pastel", label: "Pastell", icon: "🧁" },
-    { id: "neon", label: "Neon", icon: "🎉" },
-    { id: "forest", label: "Forest", icon: "🌲" }
+  { id: 'sky', label: 'Sky', icon: '🌤️' },
+  { id: 'dark', label: 'Dark Mode', icon: '🌙' },
+  { id: 'pastel', label: 'Pastell', icon: '🧁' },
+  { id: 'neon', label: 'Neon', icon: '🎉' },
+  { id: 'forest', label: 'Forest', icon: '🌲' },
 ];
 
-const FALLBACK_THEME = "sky";
+const FALLBACK_THEME = 'sky';
 
 function normalizeTheme(theme) {
-    if (theme === "light") return "sky"; // backwards compatibility for persisted data
-    const availableIds = new Set(THEME_OPTIONS.map(option => option.id));
-    return availableIds.has(theme) ? theme : FALLBACK_THEME;
+  if (theme === 'light') return 'sky'; // backwards compatibility for persisted data
+  const availableIds = new Set(THEME_OPTIONS.map((option) => option.id));
+  return availableIds.has(theme) ? theme : FALLBACK_THEME;
 }
 
 function getThemeDetails(theme) {
-    const normalized = normalizeTheme(theme);
-    return THEME_OPTIONS.find(option => option.id === normalized) ?? THEME_OPTIONS[0];
-}
-
-function getNextThemeId(currentTheme) {
-    const normalized = normalizeTheme(currentTheme);
-    const index = THEME_OPTIONS.findIndex(option => option.id === normalized);
-    if (index === -1) return FALLBACK_THEME;
-    const nextIndex = (index + 1) % THEME_OPTIONS.length;
-    const nextOption = THEME_OPTIONS[nextIndex];
-    return typeof nextOption?.id === "string" ? nextOption.id : FALLBACK_THEME;
-}
-
-/**
- * Cycles through the available themes in a fixed order.
- */
-export function toggleTheme() {
-    const state = getState();
-    const newTheme = getNextThemeId(state.theme);
-    updateState({ theme: newTheme });
+  const normalized = normalizeTheme(theme);
+  return (
+    THEME_OPTIONS.find((option) => option.id === normalized) ?? THEME_OPTIONS[0]
+  );
 }
 
 /**
@@ -46,8 +30,8 @@ export function toggleTheme() {
  * @param {string} themeId
  */
 export function selectTheme(themeId) {
-    const normalized = normalizeTheme(themeId);
-    updateState({ theme: normalized });
+  const normalized = normalizeTheme(themeId);
+  updateState({ theme: normalized });
 }
 
 /**
@@ -57,21 +41,21 @@ export function selectTheme(themeId) {
  * @param {string} theme - Expects 'dark' to activate dark mode; any other value switches to light mode.
  */
 export function updateTheme(theme) {
-    const normalized = normalizeTheme(theme);
-    const body = document.body;
+  const normalized = normalizeTheme(theme);
+  const body = document.body;
 
-    // Remove existing theme classes before applying the new one
-    Array.from(body.classList).forEach(cls => {
-        if (cls.startsWith("theme-")) {
-            body.classList.remove(cls);
-        }
-    });
+  // Remove existing theme classes before applying the new one
+  Array.from(body.classList).forEach((cls) => {
+    if (cls.startsWith('theme-')) {
+      body.classList.remove(cls);
+    }
+  });
 
-    body.classList.add(`theme-${normalized}`);
-    body.classList.toggle("dark", normalized === "dark");
+  body.classList.add(`theme-${normalized}`);
+  body.classList.toggle('dark', normalized === 'dark');
 
-    updateThemeButton(normalized);
-    updateThemeMenu(normalized);
+  updateThemeButton(normalized);
+  updateThemeMenu(normalized);
 }
 
 /**
@@ -79,22 +63,22 @@ export function updateTheme(theme) {
  * @param {string} theme
  */
 function updateThemeButton(theme) {
-    const details = getThemeDetails(theme);
-    const iconEl = document.getElementById("theme-icon");
-    if (iconEl) {
-        iconEl.textContent = details.icon;
-    }
+  const details = getThemeDetails(theme);
+  const iconEl = document.getElementById('theme-icon');
+  if (iconEl) {
+    iconEl.textContent = details.icon;
+  }
 
-    const labelEl = document.getElementById("theme-name");
-    if (labelEl) {
-        labelEl.textContent = details.label;
-    }
+  const labelEl = document.getElementById('theme-name');
+  if (labelEl) {
+    labelEl.textContent = details.label;
+  }
 
-    const toggle = document.getElementById("theme-toggle");
-    if (toggle) {
-        toggle.setAttribute("aria-label", `Design ändern (${details.label})`);
-        toggle.setAttribute("aria-expanded", String(isThemeMenuOpen()));
-    }
+  const toggle = document.getElementById('theme-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-label', `Design ändern (${details.label})`);
+    toggle.setAttribute('aria-expanded', String(isThemeMenuOpen()));
+  }
 }
 
 /**
@@ -102,27 +86,28 @@ function updateThemeButton(theme) {
  * @param {string} theme
  */
 function updateThemeMenu(theme) {
-    const normalized = normalizeTheme(theme);
-    document.querySelectorAll(".theme-option").forEach(button => {
-        if (!(button instanceof HTMLButtonElement)) {
-            return;
-        }
+  const normalized = normalizeTheme(theme);
+  document.querySelectorAll('.theme-option').forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
 
-        const datasetTheme = typeof button.dataset.theme === "string" ? button.dataset.theme : "";
-        const isActive = datasetTheme === normalized;
-        if (isActive) {
-            button.classList.add("active");
-            button.setAttribute("aria-checked", "true");
-        } else {
-            button.classList.remove("active");
-            button.setAttribute("aria-checked", "false");
-        }
-    });
+    const datasetTheme =
+      typeof button.dataset.theme === 'string' ? button.dataset.theme : '';
+    const isActive = datasetTheme === normalized;
+    if (isActive) {
+      button.classList.add('active');
+      button.setAttribute('aria-checked', 'true');
+    } else {
+      button.classList.remove('active');
+      button.setAttribute('aria-checked', 'false');
+    }
+  });
 }
 
-function isThemeMenuOpen() {
-    const menu = document.getElementById("theme-menu");
-    return menu ? !menu.classList.contains("hidden") : false;
+export function isThemeMenuOpen() {
+  const menu = document.getElementById('theme-menu');
+  return menu ? !menu.classList.contains('hidden') : false;
 }
 
 /**
@@ -134,17 +119,25 @@ function isThemeMenuOpen() {
  * id "themeMeta" to green ('#10b981') at 100% or more, otherwise blue ('#0284c7').
  */
 export function updateMetaBar(state) {
-    const { tasks, wochenZiel } = state;
-    const start = getStartOfWeek(new Date());
-    const end = new Date(start); end.setDate(end.getDate() + 7);
-    const done = tasks.filter(t =>
-        t && t.erledigt && t.date &&
-        t.date >= getISODate(start) && t.date < getISODate(end)
-    ).length;
-    const percent = wochenZiel > 0
+  const { tasks, wochenZiel } = state;
+  const start = getStartOfWeek(new Date());
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  const done = tasks.filter((task) => {
+    const isoDate = task?.date;
+    return (
+      task?.erledigt &&
+      typeof isoDate === 'string' &&
+      isoDate >= getISODate(start) &&
+      isoDate < getISODate(end)
+    );
+  }).length;
+  const percent =
+    wochenZiel > 0
       ? Math.max(0, Math.min(100, Math.round((done / wochenZiel) * 100)))
       : 0;
-    document.title = `${percent}% · Wochen-Power`;
-    const meta = document.getElementById("themeMeta");
-    if (meta) meta.setAttribute("content", percent >= 100 ? "#10b981" : "#0284c7");
+  document.title = `${percent}% · Wochen-Power`;
+  const meta = document.getElementById('themeMeta');
+  if (meta)
+    meta.setAttribute('content', percent >= 100 ? '#10b981' : '#0284c7');
 }

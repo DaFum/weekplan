@@ -1,55 +1,61 @@
 // Import necessary functions from other modules
-import { selectTheme } from "./theme.js";
-import { showWoche, renderTaskModal } from "./ui.js";
-import { createRipple } from "./effects.js";
-import { setPcTimeLimit, setWeeklyGoal, toggleTask, deleteTask, saveTask } from "./tasks.js";
-import { getState, updateState } from "./state.js";
-import { openGame, closeGame, checkQuizAnswer } from "./games.js";
-import { exportWeekPlan, printWeekPlan } from "./share.js";
-import { closeModal, closePromptModal, showModalElement } from "./modal.js";
+import { selectTheme, isThemeMenuOpen } from './theme.js';
+import { showWoche, renderTaskModal } from './ui.js';
+import { createRipple } from './effects.js';
+import {
+  setPcTimeLimit,
+  setWeeklyGoal,
+  toggleTask,
+  deleteTask,
+  saveTask,
+} from './tasks.js';
+import { getState, updateState } from './state.js';
+import { openGame, closeGame, checkQuizAnswer } from './games.js';
+import { exportWeekPlan, printWeekPlan } from './share.js';
+import { closeModal, closePromptModal, showModalElement } from './modal.js';
 
-const BODY_ACTIVATION_EVENTS = ["pointerdown", "click"];
+const BODY_ACTIVATION_EVENTS = ['pointerdown', 'click'];
 
 const initStatus = {
-    listeners: false,
-    delegatedClicks: false,
-    formSubmissions: false,
-    keyboardShortcuts: false,
-    audio: {
-        handler: null,
-        completed: false,
-    },
+  listeners: false,
+  delegatedClicks: false,
+  formSubmissions: false,
+  keyboardShortcuts: false,
+  audio: {
+    handler: null,
+    completed: false,
+  },
 };
 
 /**
  * Initializes central event handlers for the user interface.
  */
 export function initEventListeners() {
-    if (initStatus.listeners) {
-        return;
-    }
+  if (initStatus.listeners) {
+    return;
+  }
 
-    initStatus.listeners = true;
-    setupAudioInitialization();
-    setupDelegatedClicks();
-    setupFormSubmissions();
-    setupKeyboardShortcuts();
+  initStatus.listeners = true;
+  setupAudioInitialization();
+  setupDelegatedClicks();
+  setupFormSubmissions();
+  setupKeyboardShortcuts();
 }
 
 /**
  * Ensures the AudioContext is activated on the first user gesture.
  */
 function setupAudioInitialization() {
-    const { audio } = initStatus;
+  const { audio } = initStatus;
 
-    if (audio.completed || audio.handler) {
-        return;
-    }
+  if (audio.completed || audio.handler) {
+    return;
+  }
 
-    audio.handler = createAudioActivationHandler();
-    BODY_ACTIVATION_EVENTS.forEach(eventName => {
-        document.body.addEventListener(eventName, audio.handler);
-    });
+  audio.handler = createAudioActivationHandler();
+  BODY_ACTIVATION_EVENTS.forEach((eventName) => {
+    document.body.addEventListener(eventName, audio.handler);
+  });
 }
 
 /**
@@ -57,77 +63,77 @@ function setupAudioInitialization() {
  * @returns {(event: Event) => Promise<void>} The event handler.
  */
 function createAudioActivationHandler() {
-    let activated = false;
-    let starting = false;
+  let activated = false;
+  let starting = false;
 
-    const handler = async () => {
-        if (activated || starting) return;
-        starting = true;
-        const success = await activateAudioContext();
-        starting = false;
+  const handler = async () => {
+    if (activated || starting) return;
+    starting = true;
+    const success = await activateAudioContext();
+    starting = false;
 
-        if (!success) {
-            return;
-        }
+    if (!success) {
+      return;
+    }
 
-        activated = true;
-        initStatus.audio.completed = true;
-        BODY_ACTIVATION_EVENTS.forEach(eventName => {
-            document.body.removeEventListener(eventName, handler);
-        });
-        initStatus.audio.handler = null;
-    };
+    activated = true;
+    initStatus.audio.completed = true;
+    BODY_ACTIVATION_EVENTS.forEach((eventName) => {
+      document.body.removeEventListener(eventName, handler);
+    });
+    initStatus.audio.handler = null;
+  };
 
-    return handler;
+  return handler;
 }
 
 /**
  * Attempts to resume Tone.js' AudioContext and updates the application state.
  */
 async function activateAudioContext() {
-    const tone = window.Tone;
-    const contextState = tone?.context?.state;
-    if (!tone || !tone.context) {
-        updateState({ audioInitialized: false });
-        return false;
-    }
+  const tone = window.Tone;
+  const contextState = tone?.context?.state;
+  if (!tone?.context) {
+    updateState({ audioInitialized: false });
+    return false;
+  }
 
-    if (contextState === "running") {
-        updateState({ audioInitialized: true });
-        return true;
-    }
+  if (contextState === 'running') {
+    updateState({ audioInitialized: true });
+    return true;
+  }
 
-    try {
-        await tone.start();
-        updateState({ audioInitialized: true });
-        console.log("AudioContext started successfully.");
-        return true;
-    } catch (error) {
-        console.error("Could not start AudioContext:", error);
-        updateState({ audioInitialized: false });
-        return false;
-    }
+  try {
+    await tone.start();
+    updateState({ audioInitialized: true });
+    console.log('AudioContext started successfully.');
+    return true;
+  } catch (error) {
+    console.error('Could not start AudioContext:', error);
+    updateState({ audioInitialized: false });
+    return false;
+  }
 }
 
 /**
  * Sets up the global click delegation handler.
  */
 function setupDelegatedClicks() {
-    if (initStatus.delegatedClicks) {
-        return;
-    }
+  if (initStatus.delegatedClicks) {
+    return;
+  }
 
-    initStatus.delegatedClicks = true;
-    document.body.addEventListener("click", handleBodyClick);
+  initStatus.delegatedClicks = true;
+  document.body.addEventListener('click', handleBodyClick);
 }
 
 function setupKeyboardShortcuts() {
-    if (initStatus.keyboardShortcuts) {
-        return;
-    }
+  if (initStatus.keyboardShortcuts) {
+    return;
+  }
 
-    initStatus.keyboardShortcuts = true;
-    document.addEventListener("keydown", handleGlobalKeydown);
+  initStatus.keyboardShortcuts = true;
+  document.addEventListener('keydown', handleGlobalKeydown);
 }
 
 /**
@@ -135,44 +141,58 @@ function setupKeyboardShortcuts() {
  * @param {MouseEvent} event - The click event.
  */
 function handleBodyClick(event) {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
+  const target = event.target;
+  if (!(target instanceof Element)) return;
 
-    handleModalButtons(target);
-    handleGameButtons(target);
-    handleSettingsButtons(target);
-    handleHeaderActions(target);
-    handleThemeInteractions(event, target);
-    handleTaskCardActions(target);
-    handleWeekNavigation(target);
-    handleQuizOption(target);
-    applyRippleEffect(target, event);
+  handleModalButtons(target);
+  handleGameButtons(target);
+  handleSettingsButtons(target);
+  handleHeaderActions(target);
+  handleThemeInteractions(event, target);
+  handleTaskCardActions(target);
+  handleWeekNavigation(target);
+  handleQuizOption(target);
+  applyRippleEffect(target, event);
 }
 
 function handleGlobalKeydown(event) {
-    if (event.key === "Escape" && isThemeMenuOpen()) {
-        closeThemeMenu();
+  if (event.key === 'Escape') {
+    // Close theme menu if open
+    if (isThemeMenuOpen()) {
+      closeThemeMenu();
+      return;
     }
+    // Close task modal if open
+    const taskModal = document.getElementById('task-modal');
+    if (
+      taskModal instanceof HTMLDialogElement &&
+      taskModal.open &&
+      !taskModal.classList.contains('hidden')
+    ) {
+      closeModal();
+      return;
+    }
+  }
 }
 
 /**
  * Registers submit handlers for forms managed by the application.
  */
 function setupFormSubmissions() {
-    if (initStatus.formSubmissions) {
-        return;
-    }
+  if (initStatus.formSubmissions) {
+    return;
+  }
 
-    initStatus.formSubmissions = true;
-    const taskForm = document.getElementById("task-form");
-    if (taskForm instanceof HTMLFormElement) {
-        taskForm.addEventListener("submit", saveTask);
-    }
+  initStatus.formSubmissions = true;
+  const taskForm = document.getElementById('task-form');
+  if (taskForm instanceof HTMLFormElement) {
+    taskForm.addEventListener('submit', saveTask);
+  }
 
-    const promptForm = document.getElementById("prompt-form");
-    if (promptForm instanceof HTMLFormElement) {
-        promptForm.addEventListener("submit", handlePromptSubmit);
-    }
+  const promptForm = document.getElementById('prompt-form');
+  if (promptForm instanceof HTMLFormElement) {
+    promptForm.addEventListener('submit', handlePromptSubmit);
+  }
 }
 
 /**
@@ -180,160 +200,166 @@ function setupFormSubmissions() {
  * @param {SubmitEvent} event - The submit event.
  */
 function handlePromptSubmit(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const { promptCallback } = getState();
-    const inputEl = document.getElementById("prompt-modal-input");
-    const errorEl = document.getElementById("prompt-modal-error");
+  const { promptCallback } = getState();
+  const inputEl = document.getElementById('prompt-modal-input');
+  const errorEl = document.getElementById('prompt-modal-error');
 
-    const resetPromptError = () => {
-        if (errorEl) {
-            errorEl.textContent = "";
-        }
-        if (inputEl instanceof HTMLInputElement) {
-            inputEl.removeAttribute("aria-invalid");
-        }
-    };
-
-    if (!(inputEl instanceof HTMLInputElement)) {
-        closePromptModal();
-        return;
-    }
-
-    resetPromptError();
-
-    const raw = inputEl.value.trim();
-    // Explicitly convert empty input to NaN; 0 is a valid value and should not be treated as NaN.
-    const value = raw === "" ? NaN : Number(raw);
-
-    if (typeof promptCallback !== "function") {
-        closePromptModal();
-        return;
-    }
-
-    if (Number.isFinite(value) && value >= 0) {
-        promptCallback(value);
-        closePromptModal();
-        return;
-    }
-
-    const message = Number.isFinite(value)
-        ? "Bitte geben Sie eine Zahl >= 0 ein."
-        : "Bitte geben Sie eine gültige Zahl ein.";
-
+  const resetPromptError = () => {
     if (errorEl) {
-        errorEl.textContent = message;
+      errorEl.textContent = '';
     }
-    inputEl.setAttribute("aria-invalid", "true");
-    inputEl.focus();
+    if (inputEl instanceof HTMLInputElement) {
+      inputEl.removeAttribute('aria-invalid');
+    }
+  };
+
+  if (!(inputEl instanceof HTMLInputElement)) {
+    closePromptModal();
+    return;
+  }
+
+  resetPromptError();
+
+  const raw = inputEl.value.trim();
+  // Explicitly convert empty input to NaN; 0 is a valid value and should not be treated as NaN.
+  const value = raw === '' ? NaN : Number(raw);
+
+  if (typeof promptCallback !== 'function') {
+    closePromptModal();
+    return;
+  }
+
+  if (Number.isFinite(value) && value >= 0) {
+    promptCallback(value);
+    closePromptModal();
+    return;
+  }
+
+  const message = Number.isFinite(value)
+    ? 'Bitte geben Sie eine Zahl >= 0 ein.'
+    : 'Bitte geben Sie eine gültige Zahl ein.';
+
+  if (errorEl) {
+    errorEl.textContent = message;
+  }
+  inputEl.setAttribute('aria-invalid', 'true');
+  inputEl.focus();
 }
 
 function handleModalButtons(target) {
-    if (target.closest("#open-task-modal")) {
-        openModal();
-    }
-    if (target.closest("#close-task-modal") || target.closest("#cancel-task-modal")) {
-        closeModal();
-    }
-    if (target.closest("#close-prompt-modal") || target.closest("#cancel-prompt-modal")) {
-        closePromptModal();
-    }
+  if (target.closest('#open-task-modal')) {
+    openModal();
+  }
+  if (
+    target.closest('#close-task-modal') ||
+    target.closest('#cancel-task-modal')
+  ) {
+    closeModal();
+  }
+  if (
+    target.closest('#close-prompt-modal') ||
+    target.closest('#cancel-prompt-modal')
+  ) {
+    closePromptModal();
+  }
 }
 
 function handleGameButtons(target) {
-    if (target.closest("#open-memory-game")) {
-        openGame("memory");
-    }
-    if (target.closest("#open-quiz-game")) {
-        openGame("quiz");
-    }
-    if (target.closest(".close-game-btn")) {
-        closeGame();
-    }
+  if (target.closest('#open-memory-game')) {
+    openGame('memory');
+  }
+  if (target.closest('#open-quiz-game')) {
+    openGame('quiz');
+  }
+  if (target.closest('.close-game-btn')) {
+    closeGame();
+  }
 }
 
 function handleHeaderActions(target) {
-    if (target.closest("#export-plan")) {
-        exportWeekPlan();
-    }
-    if (target.closest("#print-plan")) {
-        printWeekPlan();
-    }
+  if (target.closest('#export-plan')) {
+    exportWeekPlan();
+  }
+  if (target.closest('#print-plan')) {
+    printWeekPlan();
+  }
 }
 
 function handleSettingsButtons(target) {
-    if (target.closest("#pc-time-settings-btn")) {
-        setPcTimeLimit();
-    }
-    if (target.closest("#weekly-goal-settings-btn")) {
-        setWeeklyGoal();
-    }
+  if (target.closest('#pc-time-settings-btn')) {
+    setPcTimeLimit();
+  }
+  if (target.closest('#weekly-goal-settings-btn')) {
+    setWeeklyGoal();
+  }
 }
 
 function handleThemeInteractions(event, target) {
-    const toggleButton = target.closest("#theme-toggle");
-    if (toggleButton) {
-        event.preventDefault();
-        toggleThemeMenu();
-        return;
-    }
+  const toggleButton = target.closest('#theme-toggle');
+  if (toggleButton) {
+    event.preventDefault();
+    toggleThemeMenu();
+    return;
+  }
 
-    const themeOption = target.closest(".theme-option");
-    if (themeOption instanceof HTMLButtonElement) {
-        const { theme } = themeOption.dataset;
-        selectTheme(theme ?? "");
-        closeThemeMenu();
-        return;
-    }
+  const themeOption = target.closest('.theme-option');
+  if (themeOption instanceof HTMLButtonElement) {
+    const { theme } = themeOption.dataset;
+    selectTheme(theme ?? '');
+    // Keep menu open to allow user to review / change again; accessibility test expects Escape to close.
+    return;
+  }
 
-    if (isThemeMenuOpen() && !target.closest("#theme-menu")) {
-        closeThemeMenu();
-    }
+  if (isThemeMenuOpen() && !target.closest('#theme-menu')) {
+    closeThemeMenu();
+  }
 }
 
 function handleTaskCardActions(target) {
-    const taskCard = target.closest(".task-card");
-    if (!taskCard) return;
+  const taskCard = target.closest('.task-card');
+  if (!taskCard) return;
 
-    const taskId = taskCard.dataset.taskId;
-    if (!taskId) return;
+  const taskId = taskCard.dataset.taskId;
+  if (!taskId) return;
 
-    if (target.closest('.task-card-button[data-action="edit"]')) {
-        openModal(taskId);
-    }
-    if (target.closest('.task-card-button[data-action="toggle"]')) {
-        toggleTask(taskId);
-    }
-    if (target.closest('.task-card-button[data-action="delete"]')) {
-        deleteTask(taskId);
-    }
+  if (target.closest('.task-card-button[data-action="edit"]')) {
+    openModal(taskId);
+  }
+  if (target.closest('.task-card-button[data-action="toggle"]')) {
+    toggleTask(taskId);
+  }
+  if (target.closest('.task-card-button[data-action="delete"]')) {
+    deleteTask(taskId);
+  }
 }
 
 function handleWeekNavigation(target) {
-    const navButton = target.closest(".nav-button");
-    if (!navButton) return;
+  const navButton = target.closest('.nav-button');
+  if (!navButton) return;
 
-    const idx = Number.parseInt(navButton.dataset.weekIndex ?? "", 10);
-    if (Number.isFinite(idx)) {
-        showWoche(idx);
-    }
+  const idx = Number.parseInt(navButton.dataset.weekIndex ?? '', 10);
+  if (Number.isFinite(idx)) {
+    showWoche(idx);
+  }
 }
 
 function handleQuizOption(target) {
-    const quizOption = target.closest(".quiz-option");
-    if (!quizOption) return;
+  const quizOption = target.closest('.quiz-option');
+  if (!quizOption) return;
 
-    const ansIdx = Number.parseInt(quizOption.dataset.index ?? "", 10);
-    if (Number.isFinite(ansIdx)) {
-        checkQuizAnswer(ansIdx);
-    }
+  const ansIdx = Number.parseInt(quizOption.dataset.index ?? '', 10);
+  if (Number.isFinite(ansIdx)) {
+    checkQuizAnswer(ansIdx);
+  }
 }
 
 function applyRippleEffect(target, event) {
-    const btn = target.closest("button");
-    if (btn && !btn.disabled) {
-        createRipple(btn, event);
-    }
+  const btn = target.closest('button');
+  if (btn && !btn.disabled) {
+    createRipple(btn, event);
+  }
 }
 
 /**
@@ -341,43 +367,45 @@ function applyRippleEffect(target, event) {
  * @param {string|null} taskId - Optional: The ID of the task to be edited.
  */
 function openModal(taskId = null) {
-    renderTaskModal(getState(), taskId);
-    showModalElement("task-modal");
-    document.getElementById("task-name")?.focus();
+  renderTaskModal(getState(), taskId);
+  showModalElement('task-modal');
+  document.getElementById('task-name')?.focus();
 }
 
 function toggleThemeMenu() {
-    const menu = document.getElementById("theme-menu");
-    const toggle = document.getElementById("theme-toggle");
-    if (!menu) return;
-    const shouldOpen = menu.classList.contains("hidden");
-    menu.classList.toggle("hidden", !shouldOpen);
-    if (toggle) {
-        toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  const menu = document.getElementById('theme-menu');
+  const toggle = document.getElementById('theme-toggle');
+  const headerActions = document.querySelector('.header-actions');
+  if (!menu) return;
+  const shouldOpen = menu.classList.contains('hidden');
+  if (shouldOpen && headerActions && menu.parentElement !== headerActions) {
+    // Re-parent menu so absolute positioning aligns with action buttons width
+    headerActions.appendChild(menu);
+  }
+  menu.classList.toggle('hidden', !shouldOpen);
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  }
+  if (shouldOpen) {
+    const { theme } = getState();
+    const activeButton = menu.querySelector(
+      `.theme-option[data-theme="${theme}"]`
+    );
+    if (activeButton instanceof HTMLButtonElement) {
+      activeButton.focus();
+    } else {
+      menu.focus();
     }
-    if (shouldOpen) {
-        const { theme } = getState();
-        const activeButton = menu.querySelector(`.theme-option[data-theme="${theme}"]`);
-        if (activeButton instanceof HTMLButtonElement) {
-            activeButton.focus();
-        } else {
-            menu.focus();
-        }
-    }
+  }
 }
 
 function closeThemeMenu() {
-    const menu = document.getElementById("theme-menu");
-    const toggle = document.getElementById("theme-toggle");
-    if (!menu || menu.classList.contains("hidden")) return;
-    menu.classList.add("hidden");
-    if (toggle) {
-        toggle.setAttribute("aria-expanded", "false");
-        toggle.focus();
-    }
-}
-
-function isThemeMenuOpen() {
-    const menu = document.getElementById("theme-menu");
-    return Boolean(menu && !menu.classList.contains("hidden"));
+  const menu = document.getElementById('theme-menu');
+  const toggle = document.getElementById('theme-toggle');
+  if (!menu || menu.classList.contains('hidden')) return;
+  menu.classList.add('hidden');
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.focus();
+  }
 }

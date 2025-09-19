@@ -1,26 +1,52 @@
 // Import necessary functions, data, and libraries
-import { getState, updateState } from "./state.js";
-import { getISODate, getStartOfWeek, formatDisplayDate, formatMinutes, addDays } from "./utils.js";
-import { categoryLabels, kategorieDetails, motivationsSprueche, achievementsConfig } from "./config.js";
-import { updateMetaBar } from "./theme.js";
-import { getPunkteFuerTag, getCurrentStreak } from "./tasks.js";
+import { getState, updateState } from './state.js';
+import {
+  getISODate,
+  getStartOfWeek,
+  formatDisplayDate,
+  formatMinutes,
+  addDays,
+} from './utils.js';
+import {
+  categoryLabels,
+  kategorieDetails,
+  motivationsSprueche,
+  achievementsConfig,
+} from './config.js';
+import { updateMetaBar } from './theme.js';
+import { getPunkteFuerTag, getCurrentStreak } from './tasks.js';
 
 let Sortable;
-const isTestEnvironment = typeof process !== "undefined" && process.env?.NODE_ENV === "test";
+const isTestEnvironment =
+  typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
 
 async function loadSortable() {
   try {
-    const mod = await import('https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sortable.esm.js');
+    const mod = await import(
+      'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/modular/sortable.esm.js'
+    );
     return mod?.default ?? mod;
   } catch (e1) {
     try {
       return await new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
+        s.src =
+          'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js';
         s.async = true;
-        const to = setTimeout(() => { s.remove(); reject(new Error('Sortable load timeout')); }, 5000);
-        s.onload = () => { clearTimeout(to); s.remove(); resolve(window.Sortable); };
-        s.onerror = () => { clearTimeout(to); s.remove(); reject(new Error('Sortable load error')); };
+        const to = setTimeout(() => {
+          s.remove();
+          reject(new Error('Sortable load timeout'));
+        }, 5000);
+        s.onload = () => {
+          clearTimeout(to);
+          s.remove();
+          resolve(window.Sortable);
+        };
+        s.onerror = () => {
+          clearTimeout(to);
+          s.remove();
+          reject(new Error('Sortable load error'));
+        };
         document.head.appendChild(s);
       });
     } catch (e2) {
@@ -31,14 +57,14 @@ async function loadSortable() {
 }
 
 if (!isTestEnvironment) {
-    try {
-        Sortable = await loadSortable();
-    } catch (error) {
-        console.error('Failed to initialize SortableJS.', error);
-        Sortable = null;
-    }
-} else {
+  try {
+    Sortable = await loadSortable();
+  } catch (error) {
+    console.error('Failed to initialize SortableJS.', error);
     Sortable = null;
+  }
+} else {
+  Sortable = null;
 }
 
 // Cache for the last rendered tasks to optimize UI updates
@@ -49,14 +75,14 @@ const DEFAULT_PROGRESS_RING_RADIUS = 15;
  * Executes all initial rendering operations.
  */
 export function renderAllUI() {
-    const state = getState();
-    renderTimeTrackerStructure();
-    renderWeeklyGoalTrackerStructure();
-    renderStreakTrackerStructure();
-    renderAchievementsTrackerStructure();
-    renderPlan(state);
-    updateAllTrackers(state);
-    updateCoinsDisplay(state);
+  const state = getState();
+  renderTimeTrackerStructure();
+  renderWeeklyGoalTrackerStructure();
+  renderStreakTrackerStructure();
+  renderAchievementsTrackerStructure();
+  renderPlan(state);
+  updateAllTrackers(state);
+  updateCoinsDisplay(state);
 }
 
 /**
@@ -64,10 +90,11 @@ export function renderAllUI() {
  * @param {Object} state - The application state.
  */
 export function updatePunkteAnzeige(state) {
-    document.querySelectorAll(".tag-karte").forEach(card => {
-        const anzeige = card.querySelector(".score-value");
-        if (anzeige) anzeige.textContent = ` ${getPunkteFuerTag(card.id, state.tasks)}`;
-    });
+  document.querySelectorAll('.tag-karte').forEach((card) => {
+    const anzeige = card.querySelector('.score-value');
+    if (anzeige)
+      anzeige.textContent = ` ${getPunkteFuerTag(card.id, state.tasks)}`;
+  });
 }
 
 /**
@@ -75,21 +102,21 @@ export function updatePunkteAnzeige(state) {
  * @param {Object} state - The application state.
  */
 function updateAllTrackers(state) {
-    updateTimeTracker(state);
-    updateWeeklyGoalTracker(state);
-    updateStreakTracker(state);
-    updateAchievementsTracker(state);
-    updatePunkteAnzeige(state);
-    updateMetaBar(state);
+  updateTimeTracker(state);
+  updateWeeklyGoalTracker(state);
+  updateStreakTracker(state);
+  updateAchievementsTracker(state);
+  updatePunkteAnzeige(state);
+  updateMetaBar(state);
 }
 
 /**
  * Renders the structure of the time tracker.
  */
 function renderTimeTrackerStructure() {
-    const container = document.getElementById("pc-time-tracker");
-    if (!container) return;
-    container.innerHTML = `
+  const container = document.getElementById('pc-time-tracker');
+  if (!container) return;
+  container.innerHTML = `
         <div class="flex justify-between items-center mb-3">
             <h2 class="text-lg font-bold">💻 PC-Spielzeit</h2>
             <button id="pc-time-settings-btn" class="text-secondary hover:text-accent transition p-1 rounded-full hover:bg-accent">
@@ -116,42 +143,53 @@ function renderTimeTrackerStructure() {
  * @param {Object} state - The application state.
  */
 export function updateTimeTracker(state) {
-    const { tasks, pcStundenGesamt } = state;
-    const startOfWeek = getStartOfWeek(new Date());
-    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
-    const usedMinutes = tasks
-        .filter(t => t && t.kategorie === "pc" && t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek))
-        .reduce((sum, t) => sum + (t.durationInMinutes || 0), 0);
-    const totalMinutes = pcStundenGesamt * 60;
-    const remainingMinutes = totalMinutes - usedMinutes;
-    const progress = totalMinutes > 0 ? Math.min((usedMinutes / totalMinutes), 1) : 0;
-    
-    const ring = document.getElementById("pc-time-progress-ring");
-    if (ring) {
-        const r = ring?.r?.baseVal?.value ?? DEFAULT_PROGRESS_RING_RADIUS;
-        const circumference = 2 * Math.PI * r;
-        ring.style.strokeDasharray = String(circumference);
-        ring.style.strokeDashoffset = String(circumference * (1 - progress));
-    }
-    
-    const progressText = document.getElementById("pc-time-progress-text");
-    if (progressText) {
-        progressText.textContent = `${Math.round(progress * 100)}%`;
-    }
-    
-    const remainingEl = document.getElementById("pc-time-remaining");
-    if (remainingEl) {
-        remainingEl.textContent = formatMinutes(remainingMinutes);
-    }
+  const { tasks, pcStundenGesamt } = state;
+  const startOfWeek = getStartOfWeek(new Date());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+  const usedMinutes = tasks
+    .filter((task) => {
+      const isoDate = task?.date;
+      return (
+        task?.kategorie === 'pc' &&
+        task?.erledigt &&
+        typeof isoDate === 'string' &&
+        isoDate >= getISODate(startOfWeek) &&
+        isoDate < getISODate(endOfWeek)
+      );
+    })
+    .reduce((sum, t) => sum + (t.durationInMinutes || 0), 0);
+  const totalMinutes = pcStundenGesamt * 60;
+  const remainingMinutes = totalMinutes - usedMinutes;
+  const progress =
+    totalMinutes > 0 ? Math.min(usedMinutes / totalMinutes, 1) : 0;
+
+  const ring = document.getElementById('pc-time-progress-ring');
+  if (ring) {
+    const r = ring?.r?.baseVal?.value ?? DEFAULT_PROGRESS_RING_RADIUS;
+    const circumference = 2 * Math.PI * r;
+    ring.style.strokeDasharray = String(circumference);
+    ring.style.strokeDashoffset = String(circumference * (1 - progress));
+  }
+
+  const progressText = document.getElementById('pc-time-progress-text');
+  if (progressText) {
+    progressText.textContent = `${Math.round(progress * 100)}%`;
+  }
+
+  const remainingEl = document.getElementById('pc-time-remaining');
+  if (remainingEl) {
+    remainingEl.textContent = formatMinutes(remainingMinutes);
+  }
 }
 
 /**
  * Renders the structure of the weekly goal tracker.
  */
 function renderWeeklyGoalTrackerStructure() {
-    const container = document.getElementById("weekly-goal-tracker");
-    if (!container) return;
-    container.innerHTML = `
+  const container = document.getElementById('weekly-goal-tracker');
+  if (!container) return;
+  container.innerHTML = `
         <div class="flex justify-between items-center mb-3">
             <h2 class="text-lg font-bold">🎯 Wochenziel</h2>
             <button id="weekly-goal-settings-btn" class="text-secondary hover:text-accent transition p-1 rounded-full hover:bg-accent">
@@ -169,29 +207,38 @@ function renderWeeklyGoalTrackerStructure() {
  * @param {Object} state - The application state.
  */
 export function updateWeeklyGoalTracker(state) {
-    const { tasks, wochenZiel } = state;
-    const tasksArray = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
-    const startOfWeek = getStartOfWeek(new Date());
-    const endOfWeek = new Date(startOfWeek); endOfWeek.setDate(endOfWeek.getDate() + 7);
-    const tasksDone = tasksArray
-        .filter(t => t && t.erledigt && t.date >= getISODate(startOfWeek) && t.date < getISODate(endOfWeek))
-        .length;
-    const progress = wochenZiel > 0 ? Math.min((tasksDone / wochenZiel) * 100, 100) : 0;
+  const { tasks, wochenZiel } = state;
+  const tasksArray = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
+  const startOfWeek = getStartOfWeek(new Date());
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+  const tasksDone = tasksArray.filter((task) => {
+    const isoDate = task?.date;
+    return (
+      task?.erledigt &&
+      typeof isoDate === 'string' &&
+      isoDate >= getISODate(startOfWeek) &&
+      isoDate < getISODate(endOfWeek)
+    );
+  }).length;
+  const progress =
+    wochenZiel > 0 ? Math.min((tasksDone / wochenZiel) * 100, 100) : 0;
 
-    const goalTextEl = document.getElementById("weekly-goal-text");
-    if (goalTextEl) goalTextEl.textContent = `${tasksDone} / ${wochenZiel} Aufgaben`;
+  const goalTextEl = document.getElementById('weekly-goal-text');
+  if (goalTextEl)
+    goalTextEl.textContent = `${tasksDone} / ${wochenZiel} Aufgaben`;
 
-    const goalBarEl = document.getElementById("weekly-goal-progress-bar");
-    if (goalBarEl) goalBarEl.style.width = `${progress}%`;
+  const goalBarEl = document.getElementById('weekly-goal-progress-bar');
+  if (goalBarEl) goalBarEl.style.width = `${progress}%`;
 }
 
 /**
  * Renders the structure of the streak tracker.
  */
 function renderStreakTrackerStructure() {
-    const container = document.getElementById("streak-tracker");
-    if (!container) return;
-    container.innerHTML = `
+  const container = document.getElementById('streak-tracker');
+  if (!container) return;
+  container.innerHTML = `
         <h2 class="text-lg font-bold mb-2">🔥 Streak</h2>
         <div id="streak-value" class="text-3xl font-black text-orange-500">0</div>
         <div class="text-sm text-secondary">Tage in Folge</div>`;
@@ -202,75 +249,81 @@ function renderStreakTrackerStructure() {
  * @param {Object} state - The application state.
  */
 export function updateStreakTracker(state) {
-    const streakValueEl = document.getElementById("streak-value");
-    if (streakValueEl) {
-        const safeTasks = Array.isArray(state.tasks) ? state.tasks : [];
-        streakValueEl.textContent = getCurrentStreak(safeTasks);
-    }
+  const streakValueEl = document.getElementById('streak-value');
+  if (streakValueEl) {
+    const safeTasks = Array.isArray(state.tasks) ? state.tasks : [];
+    streakValueEl.textContent = getCurrentStreak(safeTasks);
+  }
 }
 
 function renderAchievementsTrackerStructure() {
-    const container = document.getElementById("achievements-tracker");
-    if (!container) return;
-    container.innerHTML = `
+  const container = document.getElementById('achievements-tracker');
+  if (!container) return;
+  container.innerHTML = `
         <h2 class="text-lg font-bold">🏅 Erfolge</h2>
         <div id="achievement-progress" class="achievement-progress"></div>
         <div class="achievement-list" id="achievement-list"></div>`;
 }
 
 function updateAchievementsTracker(state) {
-    const listEl = document.getElementById("achievement-list");
-    const progressEl = document.getElementById("achievement-progress");
-    if (!listEl || !progressEl) return;
+  const listEl = document.getElementById('achievement-list');
+  const progressEl = document.getElementById('achievement-progress');
+  if (!listEl || !progressEl) return;
 
-    const tasks = Array.isArray(state.tasks) ? state.tasks : [];
-    const completedTasks = tasks.filter(task => task?.erledigt).length;
-    const pcCompleted = tasks.filter(task => task?.erledigt && task?.kategorie === "pc").length;
-    const streak = getCurrentStreak(tasks);
+  const tasks = Array.isArray(state.tasks) ? state.tasks : [];
+  const completedTasks = tasks.filter((task) => task?.erledigt).length;
+  const pcCompleted = tasks.filter(
+    (task) => task?.erledigt && task?.kategorie === 'pc'
+  ).length;
+  const streak = getCurrentStreak(tasks);
 
-    const progressItems = [];
-    listEl.innerHTML = "";
+  const progressItems = [];
+  listEl.innerHTML = '';
 
-    achievementsConfig.forEach(achievement => {
-        const achieved = isAchievementUnlocked(achievement, { completedTasks, pcCompleted, streak });
-        if (achieved) {
-            progressItems.push(achievement);
-        }
-
-        const badge = document.createElement("div");
-        badge.className = `achievement-badge${achieved ? " completed" : ""}`;
-        badge.setAttribute("role", "status");
-        badge.setAttribute(
-            "aria-label",
-            `${achievement.label}: ${achieved ? "freigeschaltet" : "noch offen"}`
-        );
-
-        const emojiSpan = document.createElement("span");
-        emojiSpan.setAttribute("aria-hidden", "true");
-        emojiSpan.textContent = achievement.emoji;
-
-        const labelSpan = document.createElement("span");
-        labelSpan.textContent = achievement.label;
-
-        badge.append(emojiSpan, labelSpan);
-        listEl.appendChild(badge);
+  achievementsConfig.forEach((achievement) => {
+    const achieved = isAchievementUnlocked(achievement, {
+      completedTasks,
+      pcCompleted,
+      streak,
     });
+    if (achieved) {
+      progressItems.push(achievement);
+    }
 
-    const unlockedCount = progressItems.length;
-    progressEl.textContent = `${unlockedCount} von ${achievementsConfig.length} Erfolgen freigeschaltet`;
+    const badge = document.createElement('div');
+    badge.className = `achievement-badge${achieved ? ' completed' : ''}`;
+    badge.setAttribute('role', 'status');
+    badge.setAttribute(
+      'aria-label',
+      `${achievement.label}: ${achieved ? 'freigeschaltet' : 'noch offen'}`
+    );
+
+    const emojiSpan = document.createElement('span');
+    emojiSpan.setAttribute('aria-hidden', 'true');
+    emojiSpan.textContent = achievement.emoji;
+
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = achievement.label;
+
+    badge.append(emojiSpan, labelSpan);
+    listEl.appendChild(badge);
+  });
+
+  const unlockedCount = progressItems.length;
+  progressEl.textContent = `${unlockedCount} von ${achievementsConfig.length} Erfolgen freigeschaltet`;
 }
 
 function isAchievementUnlocked(achievement, stats) {
-    switch (achievement.type) {
-        case "completedTasks":
-            return stats.completedTasks >= achievement.threshold;
-        case "streak":
-            return stats.streak >= achievement.threshold;
-        case "pcCompleted":
-            return stats.pcCompleted >= achievement.threshold;
-        default:
-            return false;
-    }
+  switch (achievement.type) {
+    case 'completedTasks':
+      return stats.completedTasks >= achievement.threshold;
+    case 'streak':
+      return stats.streak >= achievement.threshold;
+    case 'pcCompleted':
+      return stats.pcCompleted >= achievement.threshold;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -278,82 +331,88 @@ function isAchievementUnlocked(achievement, stats) {
  * @param {Object} state - The application state.
  */
 export function renderPlan(state) {
-    const { aktiveWoche } = state;
-    const wochenContainer = document.getElementById("wochen-container");
-    const wochenNav = document.getElementById("wochen-nav");
-    wochenContainer.innerHTML = "";
-    wochenNav.innerHTML = "";
-    const startOfCurrentWeek = getStartOfWeek(new Date());
-    const todayISO = getISODate(new Date());
+  const { aktiveWoche } = state;
+  const wochenContainer = document.getElementById('wochen-container');
+  const wochenNav = document.getElementById('wochen-nav');
+  wochenContainer.innerHTML = '';
+  wochenNav.innerHTML = '';
+  const startOfCurrentWeek = getStartOfWeek(new Date());
+  const todayISO = getISODate(new Date());
 
-    for (let week = 0; week < 4; week++) {
-        const weekStart = new Date(startOfCurrentWeek); weekStart.setDate(weekStart.getDate() + week * 7);
-        const navBtn = document.createElement("button");
-        navBtn.textContent = `Woche ${week + 1}`;
-        navBtn.className = "nav-button";
-        navBtn.dataset.weekIndex = week;
-        wochenNav.appendChild(navBtn);
+  for (let week = 0; week < 4; week++) {
+    const weekStart = new Date(startOfCurrentWeek);
+    weekStart.setDate(weekStart.getDate() + week * 7);
+    const navBtn = document.createElement('button');
+    navBtn.textContent = `Woche ${week + 1}`;
+    navBtn.className = 'nav-button';
+    navBtn.dataset.weekIndex = week;
+    wochenNav.appendChild(navBtn);
 
-        const wochenAnsicht = document.createElement("div");
-        wochenAnsicht.id = `woche-${week}`;
-        wochenAnsicht.className = "wochen-ansicht hidden";
+    const wochenAnsicht = document.createElement('div');
+    wochenAnsicht.id = `woche-${week}`;
+    wochenAnsicht.className = 'wochen-ansicht hidden';
 
-        const tagesContainer = document.createElement("div");
-        tagesContainer.className = "tag-container flex overflow-x-auto pb-4 space-x-4 px-1";
+    const tagesContainer = document.createElement('div');
+    tagesContainer.className =
+      'tag-container flex overflow-x-auto pb-4 space-x-4 px-1';
 
-        for (let day = 0; day < 7; day++) {
-            const currentDate = new Date(weekStart); currentDate.setDate(currentDate.getDate() + day);
-            const isoDate = getISODate(currentDate);
-            const isToday = isoDate === todayISO;
+    for (let day = 0; day < 7; day++) {
+      const currentDate = new Date(weekStart);
+      currentDate.setDate(currentDate.getDate() + day);
+      const isoDate = getISODate(currentDate);
+      const isToday = isoDate === todayISO;
 
-            const tagesKarte = document.createElement("div");
-            tagesKarte.id = isoDate;
-            tagesKarte.className = `tag-karte p-5 rounded-2xl shadow-lg ${isToday ? "today-card" : ""}`;
+      const tagesKarte = document.createElement('div');
+      tagesKarte.id = isoDate;
+      tagesKarte.className = `tag-karte p-5 rounded-2xl shadow-lg ${
+        isToday ? 'today-card' : ''
+      }`;
 
-            const dayHeader = document.createElement("div");
-            dayHeader.className = "day-header";
+      const dayHeader = document.createElement('div');
+      dayHeader.className = 'day-header';
 
-            const headerTextContainer = document.createElement("div");
+      const headerTextContainer = document.createElement('div');
 
-            const [dayTitleText, dayDateText] = formatDisplayDate(currentDate).split(",");
-            const dayTitle = document.createElement("h3");
-            dayTitle.className = "day-title";
-            dayTitle.textContent = dayTitleText ?? "";
+      const [dayTitleText, dayDateText] =
+        formatDisplayDate(currentDate).split(',');
+      const dayTitle = document.createElement('h3');
+      dayTitle.className = 'day-title';
+      dayTitle.textContent = dayTitleText ?? '';
 
-            const dayDate = document.createElement("div");
-            dayDate.className = "day-date";
-            dayDate.textContent = dayDateText?.trim() ?? "";
+      const dayDate = document.createElement('div');
+      dayDate.className = 'day-date';
+      dayDate.textContent = dayDateText?.trim() ?? '';
 
-            headerTextContainer.append(dayTitle, dayDate);
+      headerTextContainer.append(dayTitle, dayDate);
 
-            const dayScore = document.createElement("div");
-            dayScore.className = "day-score";
+      const dayScore = document.createElement('div');
+      dayScore.className = 'day-score';
 
-            const starSpan = document.createElement("span");
-            starSpan.className = "text-yellow-500";
-            starSpan.setAttribute("aria-hidden", "true");
-            starSpan.textContent = "⭐";
+      const starSpan = document.createElement('span');
+      starSpan.className = 'text-yellow-500';
+      starSpan.setAttribute('aria-hidden', 'true');
+      starSpan.textContent = '⭐';
 
-            const scoreValue = document.createElement("span");
-            scoreValue.className = "score-value";
-            scoreValue.textContent = "0";
+      const scoreValue = document.createElement('span');
+      scoreValue.className = 'score-value';
+      scoreValue.textContent = '0';
 
-            dayScore.append(starSpan, document.createTextNode(" "), scoreValue);
-            dayHeader.append(headerTextContainer, dayScore);
+      dayScore.append(starSpan, document.createTextNode(' '), scoreValue);
+      dayHeader.append(headerTextContainer, dayScore);
 
-            const taskList = document.createElement("div");
-            taskList.id = `aufgaben-liste-${isoDate}`;
-            taskList.className = "tasks-container space-y-3";
+      const taskList = document.createElement('div');
+      taskList.id = `aufgaben-liste-${isoDate}`;
+      taskList.className = 'tasks-container space-y-3';
 
-            tagesKarte.append(dayHeader, taskList);
-            tagesContainer.appendChild(tagesKarte);
-        }
-        wochenAnsicht.appendChild(tagesContainer);
-        wochenContainer.appendChild(wochenAnsicht);
+      tagesKarte.append(dayHeader, taskList);
+      tagesContainer.appendChild(tagesKarte);
     }
-    renderAllTasks(state.tasks);
-    showWoche(aktiveWoche);
-    initSortable();
+    wochenAnsicht.appendChild(tagesContainer);
+    wochenContainer.appendChild(wochenAnsicht);
+  }
+  renderAllTasks(state.tasks);
+  showWoche(aktiveWoche);
+  initSortable();
 }
 
 /**
@@ -361,16 +420,18 @@ export function renderPlan(state) {
  * @param {number} index - The index of the week to show.
  */
 export function showWoche(index) {
-    updateState({ aktiveWoche: index });
-    document.querySelectorAll(".wochen-ansicht").forEach(el => el.classList.add("hidden"));
-    document.getElementById(`woche-${index}`).classList.remove("hidden");
-    document.querySelectorAll(".nav-button").forEach(btn => {
-        const isActive = parseInt(btn.dataset.weekIndex) === index;
-        btn.classList.toggle("bg-indigo-600", isActive);
-        btn.classList.toggle("text-white", isActive);
-        btn.classList.toggle("bg-accent", !isActive);
-        btn.classList.toggle("text-secondary", !isActive);
-    });
+  updateState({ aktiveWoche: index });
+  document
+    .querySelectorAll('.wochen-ansicht')
+    .forEach((el) => el.classList.add('hidden'));
+  document.getElementById(`woche-${index}`).classList.remove('hidden');
+  document.querySelectorAll('.nav-button').forEach((btn) => {
+    const isActive = parseInt(btn.dataset.weekIndex) === index;
+    btn.classList.toggle('bg-indigo-600', isActive);
+    btn.classList.toggle('text-white', isActive);
+    btn.classList.toggle('bg-accent', !isActive);
+    btn.classList.toggle('text-secondary', !isActive);
+  });
 }
 
 /**
@@ -378,18 +439,18 @@ export function showWoche(index) {
  * @param {Array} tasks - The array of tasks.
  */
 function renderAllTasks(tasks) {
-    const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
-    lastRenderedTasks = safeTasks;
-    document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
-        list.innerHTML = "";
-        const isoDate = list.id.replace("aufgaben-liste-", "");
-        const tasksForDay = safeTasks.filter(t => t.date === isoDate);
-        if (tasksForDay.length === 0) {
-            list.appendChild(createEmptyState());
-        } else {
-            tasksForDay.forEach(task => list.appendChild(createTaskElement(task)));
-        }
-    });
+  const safeTasks = Array.isArray(tasks) ? tasks.filter(Boolean) : [];
+  lastRenderedTasks = safeTasks;
+  document.querySelectorAll('[id^="aufgaben-liste-"]').forEach((list) => {
+    list.innerHTML = '';
+    const isoDate = list.id.replace('aufgaben-liste-', '');
+    const tasksForDay = safeTasks.filter((t) => t.date === isoDate);
+    if (tasksForDay.length === 0) {
+      list.appendChild(createEmptyState());
+    } else {
+      tasksForDay.forEach((task) => list.appendChild(createTaskElement(task)));
+    }
+  });
 }
 
 /**
@@ -397,20 +458,26 @@ function renderAllTasks(tasks) {
  * @param {Object} state - The application state.
  */
 export function updateTasksUI(state) {
-    const newTasks = Array.isArray(state.tasks) ? state.tasks.filter(Boolean) : [];
-    const addedTasks = newTasks.filter(newTask => !lastRenderedTasks.some(oldTask => oldTask.id === newTask.id));
-    const deletedTasks = lastRenderedTasks.filter(oldTask => !newTasks.some(newTask => newTask.id === oldTask.id));
-    const updatedTasks = newTasks.filter(newTask => {
-        const oldTask = lastRenderedTasks.find(old => old.id === newTask.id);
-        return oldTask && JSON.stringify(newTask) !== JSON.stringify(oldTask);
-    });
+  const newTasks = Array.isArray(state.tasks)
+    ? state.tasks.filter(Boolean)
+    : [];
+  const addedTasks = newTasks.filter(
+    (newTask) => !lastRenderedTasks.some((oldTask) => oldTask.id === newTask.id)
+  );
+  const deletedTasks = lastRenderedTasks.filter(
+    (oldTask) => !newTasks.some((newTask) => newTask.id === oldTask.id)
+  );
+  const updatedTasks = newTasks.filter((newTask) => {
+    const oldTask = lastRenderedTasks.find((old) => old.id === newTask.id);
+    return oldTask && JSON.stringify(newTask) !== JSON.stringify(oldTask);
+  });
 
-    addedTasks.forEach(task => addTaskToDOM(task));
-    deletedTasks.forEach(task => removeTaskFromDOM(task.id));
-    updatedTasks.forEach(task => updateTaskInDOM(task));
+  addedTasks.forEach((task) => addTaskToDOM(task));
+  deletedTasks.forEach((task) => removeTaskFromDOM(task.id));
+  updatedTasks.forEach((task) => updateTaskInDOM(task));
 
-    lastRenderedTasks = [...newTasks];
-    updateAllTrackers(state);
+  lastRenderedTasks = [...newTasks];
+  updateAllTrackers(state);
 }
 
 /**
@@ -418,13 +485,13 @@ export function updateTasksUI(state) {
  * @param {Object} task - The task object to add.
  */
 function addTaskToDOM(task) {
-    const list = document.getElementById(`aufgaben-liste-${task.date}`);
-    if (!list) return;
+  const list = document.getElementById(`aufgaben-liste-${task.date}`);
+  if (!list) return;
 
-    const emptyState = list.querySelector(".empty-tasks");
-    if (emptyState) emptyState.remove();
+  const emptyState = list.querySelector('.empty-tasks');
+  if (emptyState) emptyState.remove();
 
-    list.appendChild(createTaskElement(task));
+  list.appendChild(createTaskElement(task));
 }
 
 /**
@@ -432,14 +499,14 @@ function addTaskToDOM(task) {
  * @param {string} taskId - The ID of the task to remove.
  */
 function removeTaskFromDOM(taskId) {
-    const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-    if (taskElement) {
-        const list = taskElement.parentElement;
-        taskElement.remove();
-        if (list && list.children.length === 0) {
-            list.appendChild(createEmptyState());
-        }
+  const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+  if (taskElement) {
+    const list = taskElement.parentElement;
+    taskElement.remove();
+    if (list?.children.length === 0) {
+      list.appendChild(createEmptyState());
     }
+  }
 }
 
 /**
@@ -447,10 +514,10 @@ function removeTaskFromDOM(taskId) {
  * @param {Object} task - The task object to update.
  */
 function updateTaskInDOM(task) {
-    const taskElement = document.querySelector(`[data-task-id="${task.id}"]`);
-    if (taskElement) {
-        taskElement.replaceWith(createTaskElement(task));
-    }
+  const taskElement = document.querySelector(`[data-task-id="${task.id}"]`);
+  if (taskElement) {
+    taskElement.replaceWith(createTaskElement(task));
+  }
 }
 
 /**
@@ -458,36 +525,36 @@ function updateTaskInDOM(task) {
  * @returns {string} The HTML string for the empty state.
  */
 function createEmptyState() {
-    const container = document.createElement("div");
-    container.className = "empty-tasks";
+  const container = document.createElement('div');
+  container.className = 'empty-tasks';
 
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("fill", "none");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("stroke-width", "1.5");
-    svg.setAttribute("stroke", "currentColor");
-    svg.setAttribute("class", "empty-tasks-icon");
-    svg.setAttribute("aria-hidden", "true");
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('stroke-width', '1.5');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('class', 'empty-tasks-icon');
+  svg.setAttribute('aria-hidden', 'true');
 
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke-linejoin", "round");
-    path.setAttribute("d", "M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z");
-    svg.appendChild(path);
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  path.setAttribute('d', 'M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z');
+  svg.appendChild(path);
 
-    container.appendChild(svg);
+  container.appendChild(svg);
 
-    const title = document.createElement("p");
-    title.className = "empty-tasks-title";
-    title.textContent = "Keine Aufgaben!";
-    container.appendChild(title);
+  const title = document.createElement('p');
+  title.className = 'empty-tasks-title';
+  title.textContent = 'Keine Aufgaben!';
+  container.appendChild(title);
 
-    const text = document.createElement("p");
-    text.className = "empty-tasks-text";
-    text.textContent = "Füge eine neue Aufgabe hinzu.";
-    container.appendChild(text);
+  const text = document.createElement('p');
+  text.className = 'empty-tasks-text';
+  text.textContent = 'Füge eine neue Aufgabe hinzu.';
+  container.appendChild(text);
 
-    return container;
+  return container;
 }
 
 /**
@@ -496,35 +563,39 @@ function createEmptyState() {
 const sortableInstances = new WeakMap();
 
 function initSortable() {
-    if (!Sortable) {
-        console.warn("SortableJS nicht verfügbar, Drag-and-Drop ist deaktiviert.");
-        return;
+  if (!Sortable) {
+    console.warn('SortableJS nicht verfügbar, Drag-and-Drop ist deaktiviert.');
+    return;
+  }
+  document.querySelectorAll('[id^="aufgaben-liste-"]').forEach((list) => {
+    const existingInstance = sortableInstances.get(list);
+    if (existingInstance) {
+      existingInstance.destroy();
     }
-    document.querySelectorAll('[id^="aufgaben-liste-"]').forEach(list => {
-        const existingInstance = sortableInstances.get(list);
-        if (existingInstance) {
-            existingInstance.destroy();
-        }
 
-        const sortable = new Sortable(list, {
-            animation: 150,
-            ghostClass: "opacity-50",
-            onEnd: (evt) => {
-                const { tasks } = getState();
-                const newIndex = evt.newIndex;
-                const oldIndex = evt.oldIndex;
-                const isoDate = list.id.replace("aufgaben-liste-", "");
-                const tasksForDay = tasks.filter(t => t && t.date === isoDate);
-                const otherTasks = tasks.filter(t => t && t.date !== isoDate);
-                const taskToMove = tasksForDay.splice(oldIndex, 1)[0];
-                if (taskToMove) {
-                    tasksForDay.splice(newIndex, 0, taskToMove);
-                }
-                updateState({ tasks: [...otherTasks, ...tasksForDay] });
-            }
-        });
-        sortableInstances.set(list, sortable);
+    const sortable = new Sortable(list, {
+      animation: 150,
+      ghostClass: 'opacity-50',
+      onEnd: (evt) => {
+        const { tasks } = getState();
+        const newIndex = evt.newIndex;
+        const oldIndex = evt.oldIndex;
+        const isoDate = list.id.replace('aufgaben-liste-', '');
+        const tasksForDay = tasks.filter(
+          (task) => Boolean(task) && task?.date === isoDate
+        );
+        const otherTasks = tasks.filter(
+          (task) => Boolean(task) && task?.date !== isoDate
+        );
+        const taskToMove = tasksForDay.splice(oldIndex, 1)[0];
+        if (taskToMove) {
+          tasksForDay.splice(newIndex, 0, taskToMove);
+        }
+        updateState({ tasks: [...otherTasks, ...tasksForDay] });
+      },
     });
+    sortableInstances.set(list, sortable);
+  });
 }
 
 /**
@@ -533,94 +604,108 @@ function initSortable() {
  * @returns {HTMLElement} The created task element.
  */
 function createTaskElement(task) {
-    const details = kategorieDetails[task.kategorie] || {
-        icon: "📝",
-        color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
-    };
-    const element = document.createElement("div");
-    element.className = `task-card ${task.erledigt ? "completed" : ""}`;
-    element.dataset.taskId = task.id;
-    element.setAttribute("role", "listitem");
-    element.setAttribute("aria-checked", task.erledigt ? "true" : "false");
+  const details = kategorieDetails[task.kategorie] || {
+    icon: '📝',
+    color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100',
+  };
+  const element = document.createElement('div');
+  element.className = `task-card ${task.erledigt ? 'completed' : ''}`;
+  element.dataset.taskId = task.id;
+  element.setAttribute('role', 'listitem');
+  element.setAttribute('aria-checked', task.erledigt ? 'true' : 'false');
 
-    // Create DOM structure safely
-    const flexContainer = document.createElement("div");
-    flexContainer.className = "flex items-start";
+  // Create DOM structure safely
+  const flexContainer = document.createElement('div');
+  flexContainer.className = 'flex items-start';
 
-    const iconDiv = document.createElement("div");
-    iconDiv.className = "mr-3 text-xl";
-    iconDiv.textContent = details.icon;
-    flexContainer.appendChild(iconDiv);
+  const iconDiv = document.createElement('div');
+  iconDiv.className = 'mr-3 text-xl';
+  iconDiv.textContent = details.icon;
+  flexContainer.appendChild(iconDiv);
 
-    const contentDiv = document.createElement("div");
-    contentDiv.className = "flex-grow";
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'flex-grow';
 
-    const nameDiv = document.createElement("div");
-    nameDiv.className = "task-name";
-    nameDiv.textContent = task.name ?? "";
-    contentDiv.appendChild(nameDiv);
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'task-name';
+  nameDiv.textContent = task.name ?? '';
+  contentDiv.appendChild(nameDiv);
 
-    const metaDiv = document.createElement("div");
-    metaDiv.className = "flex items-center gap-2 text-sm text-secondary mt-1";
+  const metaDiv = document.createElement('div');
+  metaDiv.className = 'flex items-center gap-2 text-sm text-secondary mt-1';
 
-    const categoryBadge = document.createElement("span");
-    categoryBadge.className = `task-category-badge ${details.color}`;
-    categoryBadge.textContent = categoryLabels?.[task.kategorie] ?? task.kategorie;
-    metaDiv.appendChild(categoryBadge);
+  const categoryBadge = document.createElement('span');
+  categoryBadge.className = `task-category-badge ${details.color}`;
+  categoryBadge.textContent =
+    categoryLabels?.[task.kategorie] ?? task.kategorie;
+  metaDiv.appendChild(categoryBadge);
 
-    if (task.durationInMinutes) {
-        const durationSpan = document.createElement("span");
-        durationSpan.className = "flex items-center";
-        durationSpan.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>`;
-        const durationText = document.createTextNode(`${task.durationInMinutes} Min`);
-        durationSpan.appendChild(durationText);
-        metaDiv.appendChild(durationSpan);
-    }
+  if (task.durationInMinutes) {
+    const durationSpan = document.createElement('span');
+    durationSpan.className = 'flex items-center';
+    durationSpan.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-13a.75.75 0 00-1.5 0v5c0 .414.336.75.75.75h4a.75.75 0 000-1.5h-3.25V5z" clip-rule="evenodd" /></svg>`;
+    const durationText = document.createTextNode(
+      `${task.durationInMinutes} Min`
+    );
+    durationSpan.appendChild(durationText);
+    metaDiv.appendChild(durationSpan);
+  }
 
-    contentDiv.appendChild(metaDiv);
-    flexContainer.appendChild(contentDiv);
-    element.appendChild(flexContainer);
+  contentDiv.appendChild(metaDiv);
+  flexContainer.appendChild(contentDiv);
+  element.appendChild(flexContainer);
 
-    const actionsDiv = document.createElement("div");
-    actionsDiv.className = "task-actions mt-3 flex justify-end";
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'task-actions mt-3 flex justify-end';
 
-    const editButton = document.createElement("button");
-    editButton.dataset.action = "edit";
-    editButton.className = "task-card-button text-secondary hover:bg-border-color relative overflow-hidden";
-    editButton.setAttribute("aria-label", "Bearbeiten");
-    editButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>`;
-    actionsDiv.appendChild(editButton);
+  const editButton = document.createElement('button');
+  editButton.dataset.action = 'edit';
+  editButton.className =
+    'task-card-button text-secondary hover:bg-border-color relative overflow-hidden';
+  editButton.setAttribute('aria-label', 'Bearbeiten');
+  editButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>`;
+  actionsDiv.appendChild(editButton);
 
-    const toggleButton = document.createElement("button");
-    toggleButton.dataset.action = "toggle";
-    toggleButton.className = `task-card-button ${task.erledigt ? "bg-green-500" : "border-2 border-current"} text-white font-bold text-lg relative overflow-hidden`;
-    toggleButton.setAttribute("aria-label", task.erledigt ? "Erledigt" : "Als erledigt markieren");
-    toggleButton.textContent = task.erledigt ? "✓" : "";
-    actionsDiv.appendChild(toggleButton);
+  const toggleButton = document.createElement('button');
+  toggleButton.dataset.action = 'toggle';
+  toggleButton.className = `task-card-button ${
+    task.erledigt ? 'bg-green-500' : 'border-2 border-current'
+  } text-white font-bold text-lg relative overflow-hidden`;
+  toggleButton.setAttribute(
+    'aria-label',
+    task.erledigt ? 'Erledigt' : 'Als erledigt markieren'
+  );
+  toggleButton.textContent = task.erledigt ? '✓' : '';
+  actionsDiv.appendChild(toggleButton);
 
-    const deleteButton = document.createElement("button");
-    deleteButton.dataset.action = "delete";
-    deleteButton.className = "task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden";
-    deleteButton.setAttribute("aria-label", "Löschen");
-    deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>`;
-    actionsDiv.appendChild(deleteButton);
+  const deleteButton = document.createElement('button');
+  deleteButton.dataset.action = 'delete';
+  deleteButton.className =
+    'task-card-button text-secondary hover:bg-red-200 dark:hover:bg-red-800 hover:text-red-600 relative overflow-hidden';
+  deleteButton.setAttribute('aria-label', 'Löschen');
+  deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>`;
+  actionsDiv.appendChild(deleteButton);
 
-    element.appendChild(actionsDiv);
+  element.appendChild(actionsDiv);
 
-    return element;
+  return element;
 }
 
 /**
  * Scrolls the view to the current day.
  */
 export function scrollToCurrentDay() {
-    const todayEl = document.querySelector(".today-card");
-    if (todayEl) {
-        const container = todayEl.parentElement;
-        if (container.classList.contains("flex")) {
-            container.scrollTo({ left: todayEl.offsetLeft - container.getBoundingClientRect().width * 0.05, behavior: "smooth" });
-        }
+  const todayEl = document.querySelector('.today-card');
+  if (todayEl) {
+    const container = todayEl.parentElement;
+    if (container.classList.contains('flex')) {
+      container.scrollTo({
+        left:
+          todayEl.offsetLeft - container.getBoundingClientRect().width * 0.05,
+        behavior: 'smooth',
+      });
     }
+  }
 }
 
 /**
@@ -628,19 +713,22 @@ export function scrollToCurrentDay() {
  * @param {Object} state - The application state.
  */
 export function updateCoinsDisplay(state) {
-    const el = document.getElementById("coins-count");
-    if (el) el.textContent = state.coins;
+  const el = document.getElementById('coins-count');
+  if (el) el.textContent = state.coins;
 }
 
 /**
  * Updates the motivational quote.
  */
 export const updateMotivationsspruch = () => {
-    const el = document.getElementById("motivations-spruch");
-    if (el && motivationsSprueche.length > 0) {
-        el.textContent = motivationsSprueche[Math.floor(Math.random() * motivationsSprueche.length)];
-    }
-}
+  const el = document.getElementById('motivations-spruch');
+  if (el && motivationsSprueche.length > 0) {
+    el.textContent =
+      motivationsSprueche[
+        Math.floor(Math.random() * motivationsSprueche.length)
+      ];
+  }
+};
 
 /**
  * Renders the task modal.
@@ -648,99 +736,124 @@ export const updateMotivationsspruch = () => {
  * @param {string|null} taskId - The ID of the task to edit, or null for a new task.
  */
 export function renderTaskModal(state, taskId = null) {
-    const { tasks } = state;
-    const form = document.getElementById("task-form");
-    if (form) form.reset();
+  const controls = getTaskModalControls();
+  resetTaskModalControls(controls);
 
-    const title = document.getElementById("modal-title");
-    const idInput = document.getElementById("task-id");
-    const nameInput = document.getElementById("task-name");
-    const durationInput = document.getElementById("task-duration");
-    const taskDateSelect = document.getElementById("task-date");
-    const errorEl = document.getElementById("task-name-error");
+  const taskToEdit = findTaskToEdit(state.tasks, taskId);
+  if (taskToEdit) {
+    applyTaskEditState(taskToEdit, controls);
+  }
 
-    if (errorEl) errorEl.textContent = "";
-    if (nameInput) nameInput.removeAttribute("aria-invalid");
-    if (durationInput) durationInput.value = "";
+  populateTaskDateOptions(controls.dateSelect, taskToEdit);
 
-    const taskToEdit = taskId && Array.isArray(tasks) ? tasks.find(t => t && t.id === taskId) : null;
+  if (document.querySelector('input[name="kategorie"]')) {
+    setupRadioStyling();
+  }
+}
 
-    if (taskToEdit) {
-        if (title) title.textContent = "Aufgabe bearbeiten";
-        if (idInput) idInput.value = taskToEdit.id;
-        if (nameInput) nameInput.value = taskToEdit.name ?? "";
+function getTaskModalControls() {
+  return {
+    form: document.getElementById('task-form'),
+    title: document.getElementById('modal-title'),
+    idInput: document.getElementById('task-id'),
+    nameInput: document.getElementById('task-name'),
+    durationInput: document.getElementById('task-duration'),
+    dateSelect: document.getElementById('task-date'),
+    errorEl: document.getElementById('task-name-error'),
+  };
+}
 
-        if (taskToEdit.kategorie) {
-            const radio = document.querySelector(`input[name="kategorie"][value="${taskToEdit.kategorie}"]`);
-            if (radio) radio.checked = true;
-        }
+function resetTaskModalControls(controls) {
+  controls.form?.reset();
+  if (controls.errorEl) controls.errorEl.textContent = '';
+  if (controls.nameInput) controls.nameInput.removeAttribute('aria-invalid');
+  if (controls.durationInput) controls.durationInput.value = '';
+  if (controls.idInput) controls.idInput.value = '';
+  if (controls.title) controls.title.textContent = 'Neue Aufgabe erstellen';
+}
 
-        if (durationInput) {
-            durationInput.value = taskToEdit.kategorie === "pc"
-                ? String(taskToEdit.durationInMinutes ?? 0)
-                : "";
-        }
-    } else {
-        if (title) title.textContent = "Neue Aufgabe erstellen";
-        if (idInput) idInput.value = "";
+function findTaskToEdit(tasks, taskId) {
+  if (!taskId || !Array.isArray(tasks)) {
+    return null;
+  }
+  return tasks.find((task) => Boolean(task) && task?.id === taskId) ?? null;
+}
+
+function applyTaskEditState(task, controls) {
+  if (controls.title) controls.title.textContent = 'Aufgabe bearbeiten';
+  if (controls.idInput) controls.idInput.value = task.id ?? '';
+  if (controls.nameInput) controls.nameInput.value = task.name ?? '';
+
+  if (task.kategorie) {
+    const radio = document.querySelector(
+      `input[name="kategorie"][value="${task.kategorie}"]`
+    );
+    if (radio) radio.checked = true;
+  }
+
+  if (controls.durationInput) {
+    controls.durationInput.value =
+      task.kategorie === 'pc' ? String(task.durationInMinutes ?? 0) : '';
+  }
+}
+
+function populateTaskDateOptions(select, taskToEdit) {
+  if (!(select instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  select.innerHTML = '';
+  const now = new Date();
+  const startOfWeek = getStartOfWeek(now);
+  const todayISO = getISODate(now);
+
+  for (let week = 0; week < 4; week++) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = `Woche ${week + 1}`;
+    for (let day = 0; day < 7; day++) {
+      const currentDate = addDays(startOfWeek, week * 7 + day);
+      const isoDate = getISODate(currentDate);
+      const option = document.createElement('option');
+      option.value = isoDate;
+      option.textContent = formatDisplayDate(currentDate);
+
+      if (taskToEdit) {
+        option.selected = isoDate === taskToEdit.date;
+      } else {
+        option.selected = isoDate === todayISO;
+      }
+      optgroup.appendChild(option);
     }
-
-    if (taskDateSelect) {
-        taskDateSelect.innerHTML = "";
-        const now = new Date();
-        const startOfWeek = getStartOfWeek(now);
-        const todayISO = getISODate(now);
-
-        for (let week = 0; week < 4; week++) {
-            const optgroup = document.createElement("optgroup");
-            optgroup.label = `Woche ${week + 1}`;
-            for (let day = 0; day < 7; day++) {
-                const currentDate = addDays(startOfWeek, week * 7 + day);
-                const isoDate = getISODate(currentDate);
-                const option = document.createElement("option");
-                option.value = isoDate;
-                option.textContent = formatDisplayDate(currentDate);
-
-                if (taskToEdit) {
-                    option.selected = (isoDate === taskToEdit.date);
-                } else {
-                    option.selected = (isoDate === todayISO);
-                }
-                optgroup.appendChild(option);
-            }
-            taskDateSelect.appendChild(optgroup);
-        }
-    }
-
-    if (document.querySelector('input[name="kategorie"]')) {
-      setupRadioStyling();
-    }
+    select.appendChild(optgroup);
+  }
 }
 
 /**
  * Sets up the styling for the category radio buttons.
  */
 function setupRadioStyling() {
-    const radios = document.querySelectorAll('input[name="kategorie"]');
-    const durationContainer = document.getElementById("pc-duration-container");
-    const update = () => {
-        const selected = document.querySelector('input[name="kategorie"]:checked')?.value;
-        if (durationContainer) {
-            durationContainer.classList.toggle("hidden", selected !== "pc");
-        }
-        radios.forEach(r => {
-            const d = r.nextElementSibling;
-            const isActive = r.checked;
-            if (d) {
-                d.classList.toggle("active", isActive);
-                d.classList.toggle("bg-indigo-600", isActive);
-                d.classList.toggle("border-indigo-500", isActive);
-                d.classList.toggle("text-white", isActive);
-                d.classList.toggle("font-bold", isActive);
-                d.classList.toggle("border-border-color", !isActive);
-            }
-        });
-    };
-    radios.forEach(radio => radio.addEventListener("change", update));
-    update();
+  const radios = document.querySelectorAll('input[name="kategorie"]');
+  const durationContainer = document.getElementById('pc-duration-container');
+  const update = () => {
+    const selected = document.querySelector(
+      'input[name="kategorie"]:checked'
+    )?.value;
+    if (durationContainer) {
+      durationContainer.classList.toggle('hidden', selected !== 'pc');
+    }
+    radios.forEach((r) => {
+      const d = r.nextElementSibling;
+      const isActive = r.checked;
+      if (d) {
+        d.classList.toggle('active', isActive);
+        d.classList.toggle('bg-indigo-600', isActive);
+        d.classList.toggle('border-indigo-500', isActive);
+        d.classList.toggle('text-white', isActive);
+        d.classList.toggle('font-bold', isActive);
+        d.classList.toggle('border-border-color', !isActive);
+      }
+    });
+  };
+  radios.forEach((radio) => radio.addEventListener('change', update));
+  update();
 }
