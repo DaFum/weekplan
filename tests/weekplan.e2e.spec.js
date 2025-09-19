@@ -87,9 +87,16 @@ test.beforeAll(async () => {
   } else if (typeof address === 'string') {
     baseURL = address;
   } else {
-    throw new Error('Unable to determine server address');
-  }
-});
+    if (server) {
+      await new Promise((resolve, reject) => {
+        server.close(err => {
+          if (err) {
+            return reject(err);
+          }
+          resolve();
+        });
+      });
+      server = null;
 
 test.afterAll(async () => {
   if (server) {
