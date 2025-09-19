@@ -46,7 +46,12 @@ test.beforeAll(async () => {
       }
       const normalizedPath = path.normalize(relativePath).replace(/^\/+/, '');
       const filePath = path.join(rootDir, normalizedPath);
-      if (!filePath.startsWith(rootDir)) {
+      const resolvedFilePath = path.resolve(filePath);
+      const resolvedRootDir = path.resolve(rootDir);
+      if (
+        resolvedFilePath !== resolvedRootDir &&
+        !resolvedFilePath.startsWith(resolvedRootDir + path.sep)
+      ) {
         res.writeHead(403).end('Forbidden');
         return;
       }
