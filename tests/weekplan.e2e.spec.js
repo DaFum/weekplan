@@ -38,10 +38,12 @@ test.beforeAll(async () => {
     try {
       const requestUrl = new URL(req.url ?? '/', 'http://localhost');
       let relativePath = decodeURIComponent(requestUrl.pathname);
-      const normalizedPath = path.normalize(relativePath).replace(/^\/+/, '');
-      const filePath = path.resolve(rootDir, normalizedPath);
-      if (!filePath.startsWith(path.resolve(rootDir))) {
-        res.writeHead(403).end('Forbidden');
+      if (relativePath.endsWith('/')) {
+        relativePath = `${relativePath}index.html`;
+      }
+      if (relativePath === '') {
+        relativePath = '/index.html';
+      }
       const normalizedPath = path.normalize(relativePath).replace(/^\/+/, '');
       const filePath = path.join(rootDir, normalizedPath);
       if (!filePath.startsWith(rootDir)) {
@@ -70,16 +72,26 @@ test.beforeAll(async () => {
     server?.listen(0, resolve);
   });
 
+  if (!server) {
+    throw new Error('Server failed to start');
+  }
+
+  const address = server.address();
+  if (address && typeof address === 'object') {
+    baseURL = `http://127.0.0.1:${address.port}`;
+  } else if (typeof address === 'string') {
+    baseURL = address;
+  } else {
+    throw new Error('Unable to determine server address');
+  }
+});
+
+test.afterAll(async () => {
   if (server) {
     await new Promise(resolve => server.close(resolve));
+    server = null;
+    baseURL = '';
   }
-    if (server) {
-      server.close(() => resolve(undefined));
-      server = null;
-    } else {
-      resolve(undefined);
-    }
-  });
 });
 
 test.beforeEach(async ({ page }) => {
@@ -104,13 +116,13 @@ test.beforeEach(async ({ page }) => {
   await page.waitForSelector('#wochen-nav .nav-button');
 });
 
-test('zeigt den Header und die Schnellaktionen an', async ({ page }) => {
+test('displays the header and quick actions', async ({ page }) => {
   await expect(page.locator('h1.header-title')).toHaveText('Wochen-Power');
   await expect(page.locator('#motivations-spruch')).toBeVisible();
   await expect(page.locator('#theme-toggle')).toBeVisible();
 });
 
-test('öffnet das Design-Menü über den Toggle-Button', async ({ page }) => {
+test('opens the design menu via the toggle button', async ({ page }) => {
   const menu = page.locator('#theme-menu');
   await expect(menu).toBeHidden();
 
@@ -120,7 +132,7 @@ test('öffnet das Design-Menü über den Toggle-Button', async ({ page }) => {
   await expect(menu.getByRole('menuitemradio')).toHaveCount(5);
 });
 
-test('öffnet den Aufgaben-Dialog über den Floating Button', async ({ page }) => {
+test('opens the task dialog via the floating button', async ({ page }) => {
   await page.getByRole('button', { name: 'Neue Aufgabe erstellen' }).click();
 
   const modal = page.locator('#task-modal');
@@ -128,11 +140,11 @@ test('öffnet den Aufgaben-Dialog über den Floating Button', async ({ page }) =
   await expect(page.locator('#task-name')).toBeVisible();
 });
 
-test.describe('Responsives Layout', () => {
-  test.describe('Mobil (375px)', () => {
+test.describe('Responsive layout', () => {
+  test.describe('Mobile (375px)', () => {
     test.use({ viewport: { width: 375, height: 720 } });
 
-    test('ordnet Header-Elemente untereinander an', async ({ page }) => {
+    test('stacks header elements vertically', async ({ page }) => {
       const headerDirection = await page.evaluate(() => {
         const header = document.querySelector('.header-container');
         return header ? getComputedStyle(header).flexDirection : null;
@@ -168,6 +180,7 @@ test.describe('Responsives Layout', () => {
 
       expect(layoutMetrics).not.toBeNull();
 
+      // Allow a small tolerance for layout metrics due to cross-browser rendering differences.
       expect(layoutMetrics.menuTop).toBeGreaterThanOrEqual(layoutMetrics.actionsBottom - 2);
       expect(Math.abs(layoutMetrics.menuCenter - layoutMetrics.actionsCenter)).toBeLessThanOrEqual(8);
     });
@@ -176,7 +189,7 @@ test.describe('Responsives Layout', () => {
   test.describe('Desktop (1280px)', () => {
     test.use({ viewport: { width: 1280, height: 720 } });
 
-    test('richtet Header-Aktionen rechtsbündig aus', async ({ page }) => {
+    test('aligns header actions to the right', async ({ page }) => {
       const headerDirection = await page.evaluate(() => {
         const header = document.querySelector('.header-container');
         return header ? getComputedStyle(header).flexDirection : null;
@@ -225,6 +238,7 @@ test.describe('Responsives Layout', () => {
 
       expect(desktopMetrics).not.toBeNull();
 
+      // Allow a small tolerance for layout metrics due to cross-browser rendering differences.
       expect(desktopMetrics.menuRight).toBeLessThanOrEqual(desktopMetrics.actionsRight + 12);
       expect(desktopMetrics.menuRight).toBeGreaterThanOrEqual(desktopMetrics.toggleRight - 2);
       expect(desktopMetrics.menuTop).toBeGreaterThanOrEqual(desktopMetrics.toggleBottom - 2);
