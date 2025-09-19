@@ -245,3 +245,87 @@ test.describe('Responsive layout', () => {
     });
   });
 });
+
+// --- Additional scenarios: server headers, menu interactions, dialog UX ---
+
+test.describe('Static server', () => {
+  test('serves index.html with correct headers', async ({ request }) => {
+    const res = await request.get(`${baseURL}/index.html`);
+    expect(res.status()).toBe(200);
+    const headers = res.headers();
+    expect(headers['content-type']).toContain('text/html');
+    expect(headers['content-type']).toContain('charset=utf-8');
+    expect(headers['cache-control']).toBe('no-store');
+    const html = await res.text();
+    expect(html.length).toBeGreaterThan(50);
+  });
+
+  test('returns 404 for missing asset', async ({ request }) => {
+    const res = await request.get(`${baseURL}/__missing__-${Date.now()}.json`);
+    expect(res.status()).toBe(404);
+  });
+
+  test('blocks path traversal attempts with 403', async ({ request }) => {
+    const res = await request.get(`${baseURL}/..%2F..%2Fetc%2Fpasswd`);
+    expect(res.status()).toBe(403);
+  });
+});
+
+test.describe('Theme menu interactions', () => {
+  test('toggle button toggles menu visibility and aria-expanded', async ({ page }) => {
+    const toggle = page.getByRole('button', { name: /Design ändern/ });
+    const menu = page.locator('#theme-menu');
+
+    // Initial state
+    await expect(menu).toBeHidden();
+    const initialExpanded = await toggle.getAttribute('aria-expanded');
+    expect(initialExpanded === null || initialExpanded === 'false').toBeTruthy();
+
+    // Open
+    await toggle.click();
+    await expect(menu).toBeVisible();
+    await expect(await toggle.getAttribute('aria-expanded')).toBe('true');
+
+    // Close
+    await toggle.click();
+    await expect(menu).toBeHidden();
+    const finalExpanded = await toggle.getAttribute('aria-expanded');
+    expect(finalExpanded === null || finalExpanded === 'false').toBeTruthy();
+  });
+
+  test('selecting a theme updates checked state and menu can be closed with Escape', async ({ page }) => {
+    await page.getByRole('button', { name: /Design ändern/ }).click();
+    const radios = page.getByRole('menuitemradio');
+
+    // There should be multiple themes; pick a non-default option
+    const count = await radios.count();
+    expect(count).toBeGreaterThanOrEqual(2);
+
+    const target = radios.nth(1);
+    await target.click();
+
+    // Exactly one radio should be checked
+    await expect(page.getByRole('menuitemradio', { checked: true })).toHaveCount(1);
+
+    // Close via Escape for accessibility
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#theme-menu')).toBeHidden();
+  });
+});
+
+test.describe('Task dialog behavior', () => {
+  test('focuses task name input on open and closes with Escape', async ({ page }) => {
+    await page.getByRole('button', { name: 'Neue Aufgabe erstellen' }).click();
+
+    const modal = page.locator('#task-modal');
+    const nameInput = page.locator('#task-name');
+
+    await expect(modal).toBeVisible();
+    await expect(nameInput).toBeVisible();
+    await expect(nameInput).toBeFocused();
+
+    // Close with Escape
+    await page.keyboard.press('Escape');
+    await expect(modal).toBeHidden();
+  });
+});
