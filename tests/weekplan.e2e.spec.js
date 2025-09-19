@@ -78,7 +78,7 @@ test.beforeAll(async () => {
 
   const address = server.address();
   if (address && typeof address === 'object') {
-    baseURL = `http://127.0.0.1:${address.port}`;
+    baseURL = `http://localhost:${address.port}`;
   } else if (typeof address === 'string') {
     baseURL = address;
   } else {
