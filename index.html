@@ -194,31 +194,38 @@
         </div>
       </div>
       <!-- Section for task statistics -->
-      <section class="task-grid mb-6">
-        <div
-          id="pc-time-tracker"
-          class="stats-card"
-        ></div>
-        <div
-          id="weekly-goal-tracker"
-          class="stats-card"
-        ></div>
-        <div
-          id="streak-tracker"
-          class="stats-card"
-        ></div>
-        <div
-          id="achievements-tracker"
-          class="stats-card"
-        ></div>
-      </section>
+      <details class="collapsible-section" data-section="tracker">
+        <summary class="collapsible-summary">
+          <span class="collapsible-title">📊 Fokus &amp; Ziele</span>
+        </summary>
+        <div class="collapsible-content">
+          <section class="task-grid">
+            <div
+              id="pc-time-tracker"
+              class="stats-card"
+            ></div>
+            <div
+              id="weekly-goal-tracker"
+              class="stats-card"
+            ></div>
+            <div
+              id="streak-tracker"
+              class="stats-card"
+            ></div>
+            <div
+              id="achievements-tracker"
+              class="stats-card"
+            ></div>
+          </section>
+        </div>
+      </details>
 
       <!-- Section for mini-games -->
-      <div class="game-section">
-        <div class="game-section-header">
-          <h2 class="game-section-title">🎮 Mini-Spiele</h2>
+      <details class="collapsible-section" data-section="games">
+        <summary class="collapsible-summary">
+          <span class="collapsible-title">🎮 Mini-Spiele</span>
           <!-- Coins display -->
-          <div class="coins-display">
+          <span class="coins-display">
             <span
               class="coin"
               aria-hidden="true"
@@ -231,31 +238,33 @@
               >0</output
             >
             <span class="sr-only">Münzen</span>
+          </span>
+        </summary>
+        <div class="collapsible-content">
+          <div class="game-grid">
+            <!-- Memory game card -->
+            <button
+              id="open-memory-game"
+              type="button"
+              class="game-card bg-gradient-to-r from-blue-400 to-blue-600 text-white"
+              aria-label="Memory Spiel starten"
+            >
+              <div class="font-bold">Memory</div>
+              <div class="text-sm opacity-90">Finde Paare</div>
+            </button>
+            <!-- Quiz game card -->
+            <button
+              id="open-quiz-game"
+              type="button"
+              class="game-card bg-gradient-to-r from-green-400 to-green-600 text-white"
+              aria-label="Quiz Spiel starten"
+            >
+              <div class="font-bold">Quiz</div>
+              <div class="text-sm opacity-90">Wissenscheck</div>
+            </button>
           </div>
         </div>
-        <div class="game-grid">
-          <!-- Memory game card -->
-          <button
-            id="open-memory-game"
-            type="button"
-            class="game-card bg-gradient-to-r from-blue-400 to-blue-600 text-white"
-            aria-label="Memory Spiel starten"
-          >
-            <div class="font-bold">Memory</div>
-            <div class="text-sm opacity-90">Finde Paare</div>
-          </button>
-          <!-- Quiz game card -->
-          <button
-            id="open-quiz-game"
-            type="button"
-            class="game-card bg-gradient-to-r from-green-400 to-green-600 text-white"
-            aria-label="Quiz Spiel starten"
-          >
-            <div class="font-bold">Quiz</div>
-            <div class="text-sm opacity-90">Wissenscheck</div>
-          </button>
-        </div>
-      </div>
+      </details>
 
       <!-- Navigation for weeks -->
       <nav
